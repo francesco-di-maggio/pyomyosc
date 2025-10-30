@@ -11,11 +11,13 @@ from pyomyo.pyomyo import BT, multiord
 import serial.tools.list_ports as list_ports
 import time
 
+SCANNING_DURATION = 3  # seconds
+
 print("=" * 60)
 print("Myo MAC Address Scanner")
 print("=" * 60)
 print("\nMake sure all Myos are powered on")
-print("Scanning for 5 seconds...\n")
+print("Scanning...\n")
 
 # Find Myo dongle
 tty = None
@@ -37,7 +39,7 @@ bt.discover()
 found_myos = []
 start_time = time.time()
 
-while time.time() - start_time < 5:
+while time.time() - start_time < SCANNING_DURATION:
     p = bt.recv_packet()
 
     # Check if packet is from a Myo

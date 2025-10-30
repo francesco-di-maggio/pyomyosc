@@ -106,8 +106,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 373.0, 168.0, 22.0 ],
-                    "text": "right x_toward_elbow"
+                    "patching_rect": [ 1188.0, 373.0, 168.0, 22.0 ]
                 }
             },
             {
@@ -387,6 +386,17 @@
                         "boxes": [
                             {
                                 "box": {
+                                    "id": "obj-1",
+                                    "maxclass": "newobj",
+                                    "numinlets": 2,
+                                    "numoutlets": 1,
+                                    "outlettype": [ "int" ],
+                                    "patching_rect": [ 85.0, 86.0, 29.5, 22.0 ],
+                                    "text": "+ 1"
+                                }
+                            },
+                            {
+                                "box": {
                                     "id": "obj-49",
                                     "maxclass": "newobj",
                                     "numinlets": 2,
@@ -415,7 +425,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 76.0, 266.0, 165.0, 22.0 ],
-                                    "text": "/myo/1/led 0 200 30"
+                                    "text": "/myo/1/led 0 200 60 0 200 30"
                                 }
                             },
                             {
@@ -437,7 +447,7 @@
                                     "maxclass": "inlet",
                                     "numinlets": 0,
                                     "numoutlets": 1,
-                                    "outlettype": [ "" ],
+                                    "outlettype": [ "int" ],
                                     "patching_rect": [ 85.0, 23.0, 30.0, 30.0 ]
                                 }
                             },
@@ -466,6 +476,12 @@
                             }
                         ],
                         "lines": [
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-16", 1 ],
+                                    "source": [ "obj-1", 0 ]
+                                }
+                            },
                             {
                                 "patchline": {
                                     "destination": [ "obj-49", 0 ],
@@ -505,8 +521,7 @@
                             },
                             {
                                 "patchline": {
-                                    "destination": [ "obj-16", 1 ],
-                                    "midpoints": [ 94.5, 55.00000019824219, 94.5, 55.00000019824219 ],
+                                    "destination": [ "obj-1", 0 ],
                                     "source": [ "obj-58", 0 ]
                                 }
                             },
@@ -532,7 +547,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 602.0, 134.0, 185.0, 22.0 ],
-                    "text": "/myo/1/led 0 200 30"
+                    "text": "/myo/1/led 0 200 60 0 200 30"
                 }
             },
             {
@@ -549,14 +564,14 @@
             {
                 "box": {
                     "id": "obj-20",
-                    "maxclass": "number",
-                    "maximum": 2,
-                    "minimum": 1,
+                    "maxclass": "tab",
                     "numinlets": 1,
-                    "numoutlets": 2,
-                    "outlettype": [ "", "bang" ],
+                    "numoutlets": 3,
+                    "outlettype": [ "int", "", "" ],
                     "parameter_enable": 0,
-                    "patching_rect": [ 451.0, 37.0, 50.0, 22.0 ]
+                    "patching_rect": [ 451.0, 36.0, 54.0, 23.0 ],
+                    "tabcolor": [ 0.1843137254901961, 0.17647058823529413, 0.17647058823529413, 1.0 ],
+                    "tabs": [ "1", "2" ]
                 }
             },
             {
@@ -587,8 +602,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 791.0, 37.0, 75.0, 22.0 ],
-                    "text": "led 0 200 30"
+                    "patching_rect": [ 791.0, 37.0, 125.0, 22.0 ],
+                    "text": "led 0 200 60 0 200 30"
                 }
             },
             {
@@ -645,7 +660,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 493.5, 336.5, 97.0, 22.0 ],
-                    "text": "wave_in"
+                    "text": "rest"
                 }
             },
             {

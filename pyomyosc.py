@@ -63,13 +63,13 @@ EMG_MODE = emg_mode.FILTERED      # -128 to 127, 200Hz (clean audio)
 #   Single Myo:   [[255, 201, 227, 231, 151, 241]]
 #   Multiple Myos: [[mac1], [mac2], ...] (each requires its own USB dongle)
 
-MYO_MAC_ADDRESSES = []
+# MYO_MAC_ADDRESSES = []
 
 # Your MAC addresses (uncomment to use):
-# MYO_MAC_ADDRESSES = [
-#     [255, 201, 227, 231, 151, 241],  # Myo 1
-#     [245, 95, 150, 54, 93, 223],     # Myo 2
-# ]
+MYO_MAC_ADDRESSES = [
+    [255, 201, 227, 231, 151, 241],  # Myo 1
+    [245, 95, 150, 54, 93, 223],     # Myo 2
+]
 
 # Enable/Disable Data Streams
 SEND_EMG = True           # 8-channel EMG data
@@ -258,7 +258,8 @@ def myo_worker(myo_index, mac_addr, tty):
                     return
 
         # Identification: vibrate N times (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.)
-        for _ in range(myo_index):
+        # for _ in range(1): # Vibrate once when connected
+        for _ in range(myo_index): # Vibrate N times
             m.vibrate(1)
             time.sleep(0.3)
 
