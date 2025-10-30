@@ -1,2 +1,2 @@
-pyomyo>=1.0.5
+pyomyo>=0.0.5
 python-osc>=1.9.0

@@ -13,15 +13,12 @@ Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP,
 ```bash
 git clone https://github.com/francesco-di-maggio/pyomyosc.git
 cd pyomyosc
-pip install -r requirements.txt
-```
-
-**Optional: Use virtual environment (recommended)**
-```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
+
+**Note:** Virtual environment is required on modern macOS/Homebrew Python. This keeps dependencies isolated and prevents system conflicts.
 
 ## Quick Start
 
@@ -31,28 +28,30 @@ pip install -r requirements.txt
 3. macOS: Grant Bluetooth permissions when prompted
 
 ### Single Myo
+
+Just run the script:
 ```bash
-python pyomyosc.py
+python3 pyomyosc.py
 ```
+
+The Myo will vibrate once and start streaming on `/myo/1/*` addresses.
 
 ### Multiple Myos
-**First run** (scan for MAC addresses):
-```bash
-python pyomyosc_multi.py
-```
 
-**Edit script** with detected MAC addresses:
+Edit `pyomyosc.py` and add MAC addresses:
 ```python
 MYO_MAC_ADDRESSES = [
-    "e4:f3:c2:01:02:03",  # Myo 1
-    "d2:a1:b3:04:05:06",  # Myo 2
+    [255, 201, 227, 231, 151, 241],  # Myo 1 (left arm)
+    [147, 123, 98, 76, 54, 32],       # Myo 2 (right arm)
 ]
 ```
 
-**Second run:**
+Run the script:
 ```bash
-python pyomyosc_multi.py
+python3 pyomyosc.py
 ```
+
+Each Myo vibrates to identify itself (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.).
 
 ## OSC Messages
 
@@ -152,9 +151,13 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 [udpsend 127.0.0.1 8001]
 ```
 
-### Example Patches
-- **[pyomyosc.maxpat](pyomyosc.maxpat)** - Single Myo
-- **[pyomyosc-multi.maxpat](pyomyosc-multi.maxpat)** - Multiple Myos
+### Example Patch
+- **[pyomyosc.maxpat](pyomyosc.maxpat)** - Complete example with data visualization and command sending
+
+## Files
+
+- **pyomyosc.py** - Main script (handles single or multiple Myos)
+- **poweroff.py** - Power off utility (deep sleep)
 
 ## Workflow
 
@@ -162,18 +165,16 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 ```bash
 git clone https://github.com/francesco-di-maggio/pyomyosc.git
 cd pyomyosc
-pip install -r requirements.txt
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 **Every session:**
 ```bash
-python pyomyosc.py
-```
-
-**With virtual environment:**
-```bash
-source venv/bin/activate  # Activate venv
-python pyomyosc.py
+cd pyomyosc
+source venv/bin/activate
+python3 pyomyosc.py
 ```
 
 **In Max/MSP:**
@@ -182,20 +183,25 @@ python pyomyosc.py
 
 **When done:**
 - Press Ctrl+C
-- Myo vibrates and disconnects
+- Myo vibrates and disconnects (goes to sleep)
+
+**Deep sleep (optional):**
+```bash
+python3 poweroff.py  # Requires USB to wake
+```
 
 ## Troubleshooting
 
-### "Module not found"
+### "Module not found" or "externally-managed-environment"
+
+Make sure virtual environment is activated:
 ```bash
-pip install -r requirements.txt
+cd pyomyosc
+source venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
-If using venv:
-```bash
-source venv/bin/activate
-pip install -r requirements.txt
-```
+If you see `(venv)` in your prompt, the environment is active.
 
 ### No data in Max/MSP
 1. Check Python shows "Connected to Myo"
