@@ -5,7 +5,8 @@ Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP,
 ## Requirements
 
 - Python 3.7+
-- Myo armband with USB Bluetooth dongle
+- Myo armband(s) with USB Bluetooth dongle(s)
+- **Important:** Each Myo requires its own dedicated USB Bluetooth dongle
 - Max/MSP, TouchDesigner, or any OSC software (optional)
 
 ## Installation
@@ -23,31 +24,42 @@ pip3 install -r requirements.txt
 ## Quick Start
 
 ### Hardware Setup
-1. Plug in Myo USB Bluetooth dongle
-2. Power on Myo (hold button until vibrate)
-3. macOS: Grant Bluetooth permissions when prompted
+1. Plug in Myo USB Bluetooth dongle(s) - one per Myo
+2. Connect Myo to USB power to turn it on
+3. macOS: Grant Bluetooth permissions if prompted
 
-### Single Myo
+### Find Your Myo MAC Addresses
 
-Activate virtual environment and run:
+First, run the scanner to find your Myo MAC addresses:
 ```bash
 source venv/bin/activate
-python3 pyomyosc.py
+python3 scan.py
 ```
 
-The Myo will vibrate once and start streaming on `/myo/1/*` addresses.
+The scan will show MAC addresses in decimal format. Copy the output.
 
-**Note:** `source venv/bin/activate` must be run in every new terminal window.
+### Configure MAC Addresses
 
-### Multiple Myos
+Edit `pyomyosc.py` and add your MAC addresses:
 
-Edit `pyomyosc.py` and add MAC addresses:
+**Single Myo:**
+```python
+MYO_MAC_ADDRESSES = [
+    [255, 201, 227, 231, 151, 241],  # Your Myo
+]
+```
+
+**Multiple Myos:**
 ```python
 MYO_MAC_ADDRESSES = [
     [255, 201, 227, 231, 151, 241],  # Myo 1 (left arm)
     [147, 123, 98, 76, 54, 32],      # Myo 2 (right arm)
 ]
 ```
+
+**Important:** Each Myo needs its own USB dongle. The code will detect dongles automatically.
+
+### Run
 
 Activate virtual environment and run:
 ```bash
@@ -56,6 +68,8 @@ python3 pyomyosc.py
 ```
 
 Each Myo vibrates to identify itself (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.).
+
+**Note:** `source venv/bin/activate` must be run in every new terminal window.
 
 ## OSC Messages
 
@@ -160,8 +174,10 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 
 ## Files
 
-- **pyomyosc.py** - Main script (handles single or multiple Myos)
+- **pyomyosc.py** - Main OSC bridge script
 - **poweroff.py** - Power off utility (deep sleep)
+- **scan.py** - MAC address scanner utility
+- **pyomyosc.maxpat** - Max/MSP example patch
 
 ## Workflow
 
@@ -216,11 +232,12 @@ If you see `(venv)` in your prompt, the environment is active.
 4. Try: `OSC_IP = "127.0.0.1"` in script
 
 ### Myo won't connect
-1. Power on Myo (hold button until vibrate)
-2. Check USB dongle plugged in
-3. macOS: Grant Bluetooth permissions
+1. Connect Myo to USB power to turn it on
+2. Check USB dongle(s) plugged in (one per Myo)
+3. macOS: Grant Bluetooth permissions if prompted
 4. Try unplug/replug dongle
 5. Check battery level
+6. Run `python3 scan.py` to verify Myo is detectable
 
 ### Connection drops
 1. Myo battery ~3 hours - check level
@@ -228,10 +245,11 @@ If you see `(venv)` in your prompt, the environment is active.
 3. Keep within 10m of dongle
 
 ### Multiple Myos not found
-1. Power on all Myos before running
-2. Run scan first (without MAC addresses)
-3. Verify MAC addresses typed correctly
-4. Each Myo needs 2-3 seconds to connect
+1. Connect all Myos to USB power before running
+2. Run `python3 scan.py` first to find MAC addresses
+3. Verify MAC addresses typed correctly in pyomyosc.py
+4. Ensure you have one USB dongle per Myo
+5. Each Myo needs its own dedicated dongle
 
 ### "Address already in use"
 ```bash
