@@ -258,10 +258,10 @@ def myo_worker(myo_index, mac_addr, tty):
                     return
 
         # Identification: vibrate N times (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.)
-        # for _ in range(1): # Vibrate once when connected
-        for _ in range(myo_index): # Vibrate N times
-            m.vibrate(1)
-            time.sleep(0.3)
+        for _ in range(1): # Vibrate once when connected'
+        # for _ in range(myo_index): # Vibrate N times
+            m.vibrate(1) # Short vibration
+            time.sleep(0.5) # Pause between vibrations
 
         # Store Myo instance with thread safety
         with myos_lock:
