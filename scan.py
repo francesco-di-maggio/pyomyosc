@@ -58,7 +58,7 @@ print(f"Scan complete: Found {len(found_myos)} Myo(s)")
 print("=" * 60)
 
 if found_myos:
-    print("\nCopy this to pyomyosc.py (line 59):\n")
+    print("\nCopy this to MYO_MAC_ADDRESSES in pyomyosc.py:\n")
     print(f"MYO_MAC_ADDRESSES = {found_myos}")
     print("\n" + "=" * 60)
 else:

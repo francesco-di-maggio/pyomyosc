@@ -15,11 +15,21 @@ from pyomyo import Myo
 import re
 from serial.tools.list_ports import comports
 
-# Myo MAC Addresses - keep synchronized with pyomyosc.py line 77
-MYO_MAC_ADDRESSES = [
-    [255, 201, 227, 231, 151, 241],  # Myo 1
-    [245, 95, 150, 54, 93, 223],     # Myo 2
-]
+# Myo MAC Addresses (DECIMAL format)
+# Run: python3 scan.py to find your MAC addresses
+# Keep synchronized with pyomyosc.py
+#
+# Examples:
+#   Single Myo:   [[255, 201, 227, 231, 151, 241]]
+#   Multiple Myos: [[mac1], [mac2], ...] (each requires its own USB dongle)
+
+MYO_MAC_ADDRESSES = []
+
+# Your MAC addresses (uncomment to use):
+# MYO_MAC_ADDRESSES = [
+#     [255, 201, 227, 231, 151, 241],  # Myo 1
+#     [245, 95, 150, 54, 93, 223],     # Myo 2
+# ]
 
 def detect_dongles():
     """Detect all available Myo dongles by USB vendor/product ID"""

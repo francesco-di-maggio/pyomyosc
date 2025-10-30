@@ -4,7 +4,7 @@ Connects to one or more Myo armbands and streams data via OSC
 
 Setup:
     1. Run: python3 scan.py (to find MAC addresses in decimal format)
-    2. Edit MYO_MAC_ADDRESSES in this file (line 77)
+    2. Edit MYO_MAC_ADDRESSES in this file
     3. Run: python3 pyomyosc.py
 
 Configuration:
@@ -63,10 +63,13 @@ EMG_MODE = emg_mode.FILTERED      # -128 to 127, 200Hz (clean audio)
 #   Single Myo:   [[255, 201, 227, 231, 151, 241]]
 #   Multiple Myos: [[mac1], [mac2], ...] (each requires its own USB dongle)
 
-MYO_MAC_ADDRESSES = [
-    [255, 201, 227, 231, 151, 241],  # Myo 1
-    [245, 95, 150, 54, 93, 223],     # Myo 2
-]
+MYO_MAC_ADDRESSES = []
+
+# Your MAC addresses (uncomment to use):
+# MYO_MAC_ADDRESSES = [
+#     [255, 201, 227, 231, 151, 241],  # Myo 1
+#     [245, 95, 150, 54, 93, 223],     # Myo 2
+# ]
 
 # Enable/Disable Data Streams
 SEND_EMG = True           # 8-channel EMG data
@@ -310,7 +313,7 @@ try:
         print("\nERROR: No MAC addresses configured")
         print("\nTo find your Myo MAC addresses:")
         print("  python3 scan.py")
-        print("\nThen edit pyomyosc.py line 77:")
+        print("\nThen edit MYO_MAC_ADDRESSES in pyomyosc.py:")
         print("  MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241], ...]")
         exit(1)
 
