@@ -6,7 +6,8 @@ The Myo will NOT wake from gestures or movement.
 To turn it back on, you must plug in USB charging cable.
 
 Usage:
-    python poweroff.py
+    source venv/bin/activate  # Activate virtual environment
+    python3 poweroff.py
 
 Press Ctrl+C when done.
 """

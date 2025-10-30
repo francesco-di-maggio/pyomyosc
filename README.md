@@ -29,12 +29,15 @@ pip3 install -r requirements.txt
 
 ### Single Myo
 
-Just run the script:
+Activate virtual environment and run:
 ```bash
+source venv/bin/activate
 python3 pyomyosc.py
 ```
 
 The Myo will vibrate once and start streaming on `/myo/1/*` addresses.
+
+**Note:** `source venv/bin/activate` must be run in every new terminal window.
 
 ### Multiple Myos
 
@@ -42,12 +45,13 @@ Edit `pyomyosc.py` and add MAC addresses:
 ```python
 MYO_MAC_ADDRESSES = [
     [255, 201, 227, 231, 151, 241],  # Myo 1 (left arm)
-    [147, 123, 98, 76, 54, 32],       # Myo 2 (right arm)
+    [147, 123, 98, 76, 54, 32],      # Myo 2 (right arm)
 ]
 ```
 
-Run the script:
+Activate virtual environment and run:
 ```bash
+source venv/bin/activate
 python3 pyomyosc.py
 ```
 
@@ -86,7 +90,7 @@ Send commands from your application to control Myo:
 
 ## Configuration
 
-Edit top of `pyomyosc.py` or `pyomyosc_multi.py`:
+Edit top of `pyomyosc.py`:
 
 ```python
 # OSC Configuration
@@ -170,12 +174,14 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-**Every session:**
+**Every session (each new terminal window):**
 ```bash
 cd pyomyosc
-source venv/bin/activate
+source venv/bin/activate  # Required for every new terminal
 python3 pyomyosc.py
 ```
+
+Your prompt will show `(venv)` when activated.
 
 **In Max/MSP:**
 - Receive on port 8000

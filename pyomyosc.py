@@ -1,23 +1,34 @@
 """
 pyomyosc - Unified Myo OSC Bridge
-Automatically detects and connects to one or more Myo armbands
+Connects to one or more Myo armbands and streams data via OSC
 
-OSC Address Format: /myo/INDEX/parameter
-Examples:
-  - /myo/1/emg - EMG from Myo 1
-  - /myo/2/quat - Quaternion from Myo 2
-  - /myo/1/battery - Battery from Myo 1
+Single Myo Mode:
+    Leave MYO_MAC_ADDRESSES = [] empty
+    Connects to first available Myo
+    Streams on /myo/1/* addresses
 
-OSC Commands (incoming, optional):
-  - /myo/1/vibrate [1-3] - Trigger vibration on Myo 1
-  - /myo/2/led [r g b] - Set LED color on Myo 2
+Multi Myo Mode:
+    Specify MAC addresses in MYO_MAC_ADDRESSES list
+    Connects to specific Myos in specified order
+    Streams on /myo/1/*, /myo/2/*, /myo/3/* addresses
+    Each Myo vibrates on connection to identify itself
+
+Outgoing OSC (port 8000):
+    /myo/N/emg - 8-channel EMG data
+    /myo/N/quat - Quaternion orientation
+    /myo/N/accel - Accelerometer
+    /myo/N/gyro - Gyroscope
+    /myo/N/battery - Battery level
+    /myo/N/pose - Gesture detection (rest, fist, wave_in, etc.)
+    /myo/N/arm - Arm detection (left/right, toward_wrist/toward_elbow)
+
+Incoming OSC Commands (port 8001, optional):
+    /myo/N/vibrate [1-3] - Trigger vibration
+    /myo/N/led [r g b] - Set LED color (RGB 0-255)
 
 Usage:
-    python pyomyosc.py
-
-Configuration:
-    Leave MYO_MAC_ADDRESSES empty [] for auto-detection
-    Or specify MAC addresses for consistent indexing
+    source venv/bin/activate  # Activate virtual environment
+    python3 pyomyosc.py
 """
 
 from pyomyo import Myo, emg_mode
