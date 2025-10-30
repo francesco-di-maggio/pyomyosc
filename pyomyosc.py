@@ -2,15 +2,16 @@
 pyomyosc - Unified Myo OSC Bridge
 Connects to one or more Myo armbands and streams data via OSC
 
-Single Myo Mode:
-    Leave MYO_MAC_ADDRESSES = [] empty
-    Connects to first available Myo
-    Streams on /myo/1/* addresses
+Setup:
+    1. Run: python3 scan.py (to find MAC addresses in decimal format)
+    2. Edit MYO_MAC_ADDRESSES in this file (line 77)
+    3. Run: python3 pyomyosc.py
 
-Multi Myo Mode:
-    Specify MAC addresses in MYO_MAC_ADDRESSES list
-    Connects to specific Myos in specified order
-    Streams on /myo/1/*, /myo/2/*, /myo/3/* addresses
+Configuration:
+    MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241]]  # Single Myo
+    MYO_MAC_ADDRESSES = [[mac1], [mac2]]                  # Multiple Myos
+
+    Each Myo requires its own USB Bluetooth dongle
     Each Myo vibrates on connection to identify itself
 
 Outgoing OSC (port 8000):
@@ -38,6 +39,8 @@ from pythonosc.osc_server import BlockingOSCUDPServer
 import threading
 import time
 import queue
+import re
+from serial.tools.list_ports import comports
 
 # ==================== CONFIGURATION ====================
 
@@ -54,16 +57,16 @@ OSC_COMMAND_PORT = 8001      # Port for incoming commands from Max
 EMG_MODE = emg_mode.FILTERED      # -128 to 127, 200Hz (clean audio)
 # EMG_MODE = emg_mode.RAW           # -128 to 127, 200Hz (noisy audio)
 
-# Myo MAC Addresses
-# Leave empty to connect to any available Myo
-# Or specify MAC addresses for multiple Myos:
-MYO_MAC_ADDRESSES = []
+# Myo MAC Addresses (DECIMAL format)
+# Run: python3 scan.py to find your MAC addresses
+# Examples:
+#   Single Myo:   [[255, 201, 227, 231, 151, 241]]
+#   Multiple Myos: [[mac1], [mac2], ...] (each requires its own USB dongle)
 
-# Example with multiple Myos (specify MAC addresses):
-# MYO_MAC_ADDRESSES = [
-#     [255, 201, 227, 231, 151, 241],  # Myo 1 - e.g., left arm
-#     [147, 123, 98, 76, 54, 32],       # Myo 2 - e.g., right arm
-# ]
+MYO_MAC_ADDRESSES = [
+    [255, 201, 227, 231, 151, 241],  # Myo 1
+    [245, 95, 150, 54, 93, 223],     # Myo 2
+]
 
 # Enable/Disable Data Streams
 SEND_EMG = True           # 8-channel EMG data
@@ -90,47 +93,66 @@ osc_client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
 
 # Track connected Myos
 myos = []
-myo_threads = []
-command_queue = queue.Queue()
+command_queues = {}  # Dictionary of queues, one per Myo index
+connection_events = {}  # Events to signal when each Myo is connected
+myos_lock = threading.Lock()  # Lock for thread-safe access to myos list
 
 
-def format_mac(mac_list):
-    """Convert MAC address list to readable string"""
-    return ':'.join([f"{b:02x}" for b in mac_list])
+def detect_dongles():
+    """Detect all available Myo dongles by USB vendor/product ID"""
+    dongles = []
+    for p in comports():
+        if re.search(r'PID=2458:0*1', p[2]):  # Thalmic Labs Myo dongle
+            dongles.append(p[0])
+    return dongles
+
+
+def clamp_rgb(value):
+    """Clamp RGB value to valid range 0-255"""
+    return max(0, min(255, int(value)))
+
+
+def parse_enum_name(enum_value):
+    """Extract lowercase name from enum (e.g., 'Pose.FIST' -> 'fist')"""
+    name = str(enum_value).split('.')[1] if '.' in str(enum_value) else str(enum_value)
+    return name.lower()
 
 
 def create_handlers(myo_index):
     """Create OSC handler functions for a specific Myo index"""
 
+    # Pre-compute OSC addresses for performance (EMG runs at 200Hz)
+    emg_addr = f"/myo/{myo_index}/emg"
+    quat_addr = f"/myo/{myo_index}/quat"
+    accel_addr = f"/myo/{myo_index}/accel"
+    gyro_addr = f"/myo/{myo_index}/gyro"
+    battery_addr = f"/myo/{myo_index}/battery"
+    pose_addr = f"/myo/{myo_index}/pose"
+    arm_addr = f"/myo/{myo_index}/arm"
+
     def send_emg(emg, movement):
         if SEND_EMG:
-            osc_client.send_message(f"/myo/{myo_index}/emg", list(emg))
+            osc_client.send_message(emg_addr, list(emg))
 
     def send_imu(quat, accel, gyro):
         if SEND_IMU:
-            osc_client.send_message(f"/myo/{myo_index}/quat", list(quat))
-            osc_client.send_message(f"/myo/{myo_index}/accel", list(accel))
-            osc_client.send_message(f"/myo/{myo_index}/gyro", list(gyro))
+            osc_client.send_message(quat_addr, list(quat))
+            osc_client.send_message(accel_addr, list(accel))
+            osc_client.send_message(gyro_addr, list(gyro))
 
     def send_battery(battery_level):
         if SEND_BATTERY:
-            osc_client.send_message(f"/myo/{myo_index}/battery", battery_level)
+            osc_client.send_message(battery_addr, battery_level)
             if DEBUG_CONNECTION:
                 print(f"Myo {myo_index} battery: {battery_level}%")
 
     def send_pose(pose):
         if SEND_POSE:
-            pose_str = str(pose).split('.')[1] if '.' in str(pose) else str(pose)
-            pose_str = pose_str.lower()  # Convert to lowercase
-            osc_client.send_message(f"/myo/{myo_index}/pose", pose_str)
+            osc_client.send_message(pose_addr, parse_enum_name(pose))
 
     def send_arm(arm, xdir):
         if SEND_ARM:
-            arm_str = str(arm).split('.')[1] if '.' in str(arm) else str(arm)
-            xdir_str = str(xdir).split('.')[1] if '.' in str(xdir) else str(xdir)
-            arm_str = arm_str.lower()  # Convert to lowercase
-            xdir_str = xdir_str.lower()  # Convert to lowercase
-            osc_client.send_message(f"/myo/{myo_index}/arm", [arm_str, xdir_str])
+            osc_client.send_message(arm_addr, [parse_enum_name(arm), parse_enum_name(xdir)])
 
     return send_emg, send_imu, send_battery, send_pose, send_arm
 
@@ -147,9 +169,12 @@ def handle_vibrate(address, *args):
         intensity = int(args[0])
 
         if 1 <= intensity <= 3:
-            command_queue.put(('vibrate', myo_index, intensity))
-            if DEBUG_COMMANDS:
-                print(f"Command queued: Myo {myo_index} vibrate {intensity}")
+            if myo_index in command_queues:
+                command_queues[myo_index].put(('vibrate', intensity))
+                if DEBUG_COMMANDS:
+                    print(f"Command queued: Myo {myo_index} vibrate {intensity}")
+            else:
+                print(f"Vibrate: Myo {myo_index} not connected")
         else:
             print(f"Vibrate: invalid intensity {intensity} (must be 1-3)")
     except Exception as e:
@@ -166,16 +191,20 @@ def handle_led(address, *args):
         # Extract myo index from address: /myo/1/led -> 1
         myo_index = int(address.split('/')[2])
 
+        if myo_index not in command_queues:
+            print(f"LED: Myo {myo_index} not connected")
+            return
+
         if len(args) == 3:
-            # Same color for both LEDs
-            r, g, b = [int(v) for v in args]
-            command_queue.put(('led', myo_index, [r, g, b], [r, g, b]))
+            # Same color for both logo and bar LEDs
+            r, g, b = [clamp_rgb(v) for v in args]
+            command_queues[myo_index].put(('led', [r, g, b], [r, g, b]))
             if DEBUG_COMMANDS:
                 print(f"Command queued: Myo {myo_index} LED RGB({r}, {g}, {b})")
         elif len(args) == 6:
-            # Separate colors for logo and bar
-            r1, g1, b1, r2, g2, b2 = [int(v) for v in args]
-            command_queue.put(('led', myo_index, [r1, g1, b1], [r2, g2, b2]))
+            # Separate colors for logo and bar LEDs
+            r1, g1, b1, r2, g2, b2 = [clamp_rgb(v) for v in args]
+            command_queues[myo_index].put(('led', [r1, g1, b1], [r2, g2, b2]))
             if DEBUG_COMMANDS:
                 print(f"Command queued: Myo {myo_index} LED Logo RGB({r1}, {g1}, {b1}), Bar RGB({r2}, {g2}, {b2})")
         else:
@@ -191,40 +220,48 @@ def start_osc_server():
     dispatcher.map("/myo/*/led", handle_led)
 
     server = BlockingOSCUDPServer(("0.0.0.0", OSC_COMMAND_PORT), dispatcher)
-    print(f"OSC command receiver listening on port {OSC_COMMAND_PORT}")
-    print("  Send /myo/N/vibrate [1-3] to trigger vibration")
-    print("  Send /myo/N/led [r g b] to set LED color\n")
-
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
-    return server
 
 
-def myo_worker(myo_index, mac_addr=None):
-    """Worker thread for a single Myo"""
+def myo_worker(myo_index, mac_addr, tty):
+    """
+    Worker thread for a single Myo armband.
+
+    Each Myo runs in its own thread with its own dongle, allowing
+    simultaneous data streaming from multiple devices.
+    """
     try:
-        # Create Myo instance
-        m = Myo(mode=EMG_MODE)
+        # Create per-Myo command queue for OSC commands (vibrate, LED)
+        command_queues[myo_index] = queue.Queue()
 
-        # Connect
-        if mac_addr:
-            if DEBUG_CONNECTION:
-                print(f"Myo {myo_index}: Connecting to {format_mac(mac_addr)}...")
-            m.connect(mac_addr)
-        else:
-            if DEBUG_CONNECTION:
-                print(f"Myo {myo_index}: Scanning for device...")
-            m.connect()
+        # Initialize Myo with dedicated dongle
+        m = Myo(tty=tty, mode=EMG_MODE)
 
-        if DEBUG_CONNECTION:
-            print(f"Myo {myo_index}: Connected!")
+        # Connect with retry logic (BLE can be flaky)
+        print(f"Myo {myo_index}: Connecting...")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                m.connect(mac_addr)
+                break  # Connection successful
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Myo {myo_index}: Attempt {attempt + 1} failed, retrying...")
+                    time.sleep(1)
+                else:
+                    print(f"Myo {myo_index}: Failed after {max_retries} attempts - {e}")
+                    connection_events[myo_index].set()  # Signal failure to main thread
+                    return
 
-        # Vibrate N times to identify which Myo this is
-        m.vibrate(myo_index)
-        time.sleep(0.5)
+        # Identification: vibrate N times (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.)
+        for _ in range(myo_index):
+            m.vibrate(1)
+            time.sleep(0.3)
 
-        # Store Myo instance
-        myos.append((myo_index, m))
+        # Store Myo instance with thread safety
+        with myos_lock:
+            myos.append((myo_index, m))
 
         # Create and register handlers
         handlers = create_handlers(myo_index)
@@ -234,75 +271,98 @@ def myo_worker(myo_index, mac_addr=None):
         m.add_pose_handler(handlers[3])
         m.add_arm_handler(handlers[4])
 
-        # Main loop (battery will be reported when Myo sends update)
-        while True:
-            # Process any queued OSC commands for this Myo
-            while not command_queue.empty():
-                try:
-                    cmd = command_queue.get_nowait()
-                    if cmd[1] == myo_index:  # Check if command is for this Myo
-                        if cmd[0] == 'vibrate':
-                            intensity = cmd[2]
-                            m.vibrate(intensity)
-                            if DEBUG_COMMANDS:
-                                print(f"Executed: Myo {myo_index} vibrate {intensity}")
-                        elif cmd[0] == 'led':
-                            logo_color = cmd[2]
-                            bar_color = cmd[3]
-                            m.set_leds(logo_color, bar_color)
-                            if DEBUG_COMMANDS:
-                                print(f"Executed: Myo {myo_index} LED {logo_color}")
-                    else:
-                        # Put it back if not for this Myo
-                        command_queue.put(cmd)
-                        break
-                except queue.Empty:
-                    break
-                except Exception as e:
-                    print(f"Command execution error: {e}")
+        # Signal connection success to main thread
+        print(f"Myo {myo_index}: Ready!\n")
+        connection_events[myo_index].set()
 
-            # Run Myo data loop
+        # Main data loop: process commands and read Myo data
+        while True:
+            # Check for incoming OSC commands (non-blocking)
+            try:
+                cmd = command_queues[myo_index].get_nowait()
+                if cmd[0] == 'vibrate':
+                    m.vibrate(cmd[1])
+                    if DEBUG_COMMANDS:
+                        print(f"Executed: Myo {myo_index} vibrate {cmd[1]}")
+                elif cmd[0] == 'led':
+                    m.set_leds(cmd[1], cmd[2])  # logo_color, bar_color
+                    if DEBUG_COMMANDS:
+                        print(f"Executed: Myo {myo_index} LED {cmd[1]}")
+            except queue.Empty:
+                pass  # No commands queued
+            except Exception as e:
+                print(f"Command execution error for Myo {myo_index}: {e}")
+
+            # Read and process Myo data (triggers registered handlers)
             m.run()
 
     except Exception as e:
-        print(f"Myo {myo_index} error: {e}")
+        # Ignore "device reports readiness" errors during Ctrl+C shutdown
+        if "device reports readiness" not in str(e):
+            print(f"Myo {myo_index} error: {e}")
 
 
 # ==================== MAIN ====================
 
 try:
-    # Determine number of Myos
+    # ===== CONFIGURATION VALIDATION =====
     if not MYO_MAC_ADDRESSES:
-        print("\nMode: Single Myo (auto-connect to first available)")
-        num_myos = 1
-        MYO_MAC_ADDRESSES = [None]  # Single Myo, no MAC specified
-    else:
-        print(f"\nMode: {len(MYO_MAC_ADDRESSES)} Myo(s) with specified MAC addresses")
-        num_myos = len(MYO_MAC_ADDRESSES)
-        print("\nEach Myo will vibrate to identify itself:")
+        print("\nERROR: No MAC addresses configured")
+        print("\nTo find your Myo MAC addresses:")
+        print("  python3 scan.py")
+        print("\nThen edit pyomyosc.py line 77:")
+        print("  MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241], ...]")
+        exit(1)
+
+    # ===== HARDWARE DETECTION =====
+    dongles = detect_dongles()
+    print(f"\nDetected {len(dongles)} Bluetooth dongle(s):")
+    for i, dongle in enumerate(dongles, 1):
+        print(f"  Dongle {i}: {dongle}")
+
+    # Check if we have enough dongles
+    if len(dongles) < len(MYO_MAC_ADDRESSES):
+        print(f"\nERROR: Need {len(MYO_MAC_ADDRESSES)} dongle(s) but only found {len(dongles)}")
+        print("Each Myo requires its own Bluetooth dongle")
+        exit(1)
+
+    print(f"\nConnecting to {len(MYO_MAC_ADDRESSES)} Myo(s)...\n")
+
+    # Show identification info for multiple Myos
+    if len(MYO_MAC_ADDRESSES) > 1:
+        print("Each Myo will vibrate to identify itself:")
         print("  1 vibration  = Myo 1")
         print("  2 vibrations = Myo 2")
-        print("  3 vibrations = Myo 3, etc.")
+        print("  3 vibrations = Myo 3, etc.\n")
 
-    # Start OSC command server if enabled
+    # ===== INITIALIZATION =====
+    # Start OSC command server (runs in background thread)
     if ENABLE_OSC_COMMANDS:
         start_osc_server()
 
-    # Connect to each Myo in separate threads
-    print(f"\nConnecting to {len(MYO_MAC_ADDRESSES)} Myo(s)...\n")
+    # Create threading events to track connection status
+    for i in range(1, len(MYO_MAC_ADDRESSES) + 1):
+        connection_events[i] = threading.Event()
 
+    # ===== CONNECTION PHASE =====
+    # Start Myos sequentially to avoid BLE interference
     for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
-        thread = threading.Thread(target=myo_worker, args=(i, mac_addr), daemon=True)
+        tty = dongles[i - 1]
+        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, tty), daemon=True)
         thread.start()
-        myo_threads.append(thread)
-        time.sleep(2)  # Give each Myo time to connect
 
+        # Wait for connection (or failure) before starting next Myo
+        if not connection_events[i].wait(timeout=15):
+            print(f"\nERROR: Myo {i} connection timeout. Exiting...")
+            exit(1)
+
+    # ===== STREAMING PHASE =====
     print("\n" + "=" * 60)
-    print("Connected! Streaming OSC data...")
+    print("All Myos connected! Streaming OSC data...")
     print("=" * 60)
 
     # Show outgoing data streams
-    print("\nOutgoing data (port {}):".format(OSC_PORT))
+    print(f"\nOutgoing data (port {OSC_PORT}):")
     if len(MYO_MAC_ADDRESSES) == 1:
         print("  /myo/1/emg      - 8-channel EMG data")
         print("  /myo/1/quat     - Quaternion orientation")
@@ -318,7 +378,7 @@ try:
 
     # Show incoming commands if enabled
     if ENABLE_OSC_COMMANDS:
-        print("\nIncoming commands (port {}):".format(OSC_COMMAND_PORT))
+        print(f"\nIncoming commands (port {OSC_COMMAND_PORT}):")
         if len(MYO_MAC_ADDRESSES) == 1:
             print("  /myo/1/vibrate [1-3]  - Trigger vibration")
             print("  /myo/1/led [r g b]    - Set LED color")
@@ -330,22 +390,25 @@ try:
     print("Press Ctrl+C to stop")
     print("=" * 60 + "\n")
 
-    # Keep main thread alive
+    # Keep main thread alive while workers stream data
     while True:
         time.sleep(1)
 
 except KeyboardInterrupt:
+    # ===== SHUTDOWN =====
     print("\n\nStopping...")
 
-    # Vibrate and disconnect all Myos
-    for myo_index, m in myos:
-        try:
-            m.vibrate(1)
-            m.disconnect()
-        except:
-            pass
-
-    print("Disconnected.")
+    # Attempt graceful disconnect (second Ctrl+C forces immediate quit)
+    try:
+        with myos_lock:
+            for myo_index, m in myos:
+                try:
+                    m.disconnect()
+                except Exception:
+                    pass  # Ignore disconnect errors
+        print("Disconnected.")
+    except KeyboardInterrupt:
+        print("Force quit.")
 
 except Exception as e:
     print(f"\nError: {e}")

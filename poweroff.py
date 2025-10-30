@@ -1,42 +1,89 @@
 """
 Myo Power Off Utility
 
-Powers off the Myo completely (deep sleep).
-The Myo will NOT wake from gestures or movement.
-To turn it back on, you must plug in USB charging cable.
+Powers off all Myos (deep sleep mode).
+Myos will NOT wake from gestures - requires USB charging to turn back on.
 
 Usage:
-    source venv/bin/activate  # Activate virtual environment
+    source venv/bin/activate
     python3 poweroff.py
-
-Press Ctrl+C when done.
 """
 
 import time
-from pyomyo import Myo, emg_mode
+import threading
+from pyomyo import Myo
+import re
+from serial.tools.list_ports import comports
+
+# Myo MAC Addresses - keep synchronized with pyomyosc.py line 77
+MYO_MAC_ADDRESSES = [
+    [255, 201, 227, 231, 151, 241],  # Myo 1
+    [245, 95, 150, 54, 93, 223],     # Myo 2
+]
+
+def detect_dongles():
+    """Detect all available Myo dongles by USB vendor/product ID"""
+    dongles = []
+    for p in comports():
+        if re.search(r'PID=2458:0*1', p[2]):  # Thalmic Labs Myo dongle
+            dongles.append(p[0])
+    return dongles
 
 print("=" * 60)
 print("Myo Power Off Utility")
 print("=" * 60)
-print("\nSearching for Myo...")
 
-# Connect to Myo (no data mode for faster connection)
-m = Myo(mode=emg_mode.NO_DATA)
-m.connect()
+dongles = detect_dongles()
+print(f"\nDetected {len(dongles)} Bluetooth dongle(s)")
 
-print("Connected to Myo")
-print("\nPowering off Myo...")
-print("Note: Myo requires USB charging cable to turn back on")
-print("\nPress Ctrl+C to exit\n")
+if len(dongles) < len(MYO_MAC_ADDRESSES):
+    print(f"\nERROR: Need {len(MYO_MAC_ADDRESSES)} dongle(s) but only found {len(dongles)}")
+    exit(1)
 
-# Vibrate to confirm
-m.vibrate(2)
+myos = []
+for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
+    try:
+        print(f"\nConnecting to Myo {i}...")
+        m = Myo(tty=dongles[i-1])
+        m.connect(mac_addr)
+        print(f"  Connected!")
+
+        # Vibrate to identify which Myo
+        for _ in range(i):
+            m.vibrate(1)
+            time.sleep(0.2)
+
+        myos.append((i, m))
+    except Exception as e:
+        print(f"  ERROR: {e}")
+        exit(1)
+
+print("\n" + "=" * 60)
+print(f"Powering off {len(myos)} Myo(s)...")
+print("Note: Myos require USB charging cable to turn back on")
+print("=" * 60 + "\n")
+
 time.sleep(1)
 
-# Send poweroff command repeatedly
+def poweroff_myo(myo):
+    """Send power_off commands continuously until interrupted"""
+    try:
+        while True:
+            myo.power_off()
+            time.sleep(0.1)
+    except:
+        pass
+
+# Start thread for each Myo to send poweroff simultaneously
+for myo_index, m in myos:
+    t = threading.Thread(target=poweroff_myo, args=(m,), daemon=True)
+    t.start()
+    print(f"Myo {myo_index}: Sending poweroff commands...")
+
+print("\nPress Ctrl+C when both Myos are off")
+
 try:
     while True:
-        m.power_off()
-        time.sleep(0.1)
+        time.sleep(1)
 except KeyboardInterrupt:
-    print("\nPoweroff sent. Myo is shutting down.")
+    print(f"\nDone! {len(myos)} Myo(s) should be powered off.")
