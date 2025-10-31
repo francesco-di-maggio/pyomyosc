@@ -60,7 +60,7 @@ for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
 
         # Vibrate once to confirm connection
         m.vibrate(1)
-        time.sleep(0.3)
+        time.sleep(0.5)
 
         myos.append((i, m))
     except Exception as e:
@@ -72,7 +72,7 @@ print(f"Powering off {len(myos)} Myo(s)...")
 print("Note: Myos require USB charging cable to turn back on")
 print("=" * 60 + "\n")
 
-time.sleep(1)
+time.sleep(0.5)
 
 def poweroff_myo(myo):
     """Send power_off commands continuously until interrupted"""

@@ -404,9 +404,9 @@ try:
         thread.start()
 
         # Wait for connection (or failure) before starting next Myo
-        # Timeout: 8s per available dongle (6s attempt + 1s init + 1s overhead)
-        timeout = len(available_dongles) * 8
-        if not connection_events[i].wait(timeout=max(timeout, 8)):
+        # Timeout: 4s per available dongle
+        timeout = len(available_dongles) * 4
+        if not connection_events[i].wait(timeout=max(timeout, 4)):
             print(f"\nERROR: Myo {i} connection timeout. Exiting...")
             exit(1)
 
