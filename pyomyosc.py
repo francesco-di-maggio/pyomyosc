@@ -79,7 +79,7 @@ SEND_POSE = True          # Gesture detection
 SEND_ARM = True           # Arm detection (left/right)
 
 # Debug Output (set to True to see data in terminal)
-DEBUG_CONNECTION = True  # Show connection messages and battery updates
+DEBUG_CONNECTION = False  # Show connection messages and battery updates
 DEBUG_COMMANDS = False    # Show incoming OSC commands
 
 # =======================================================

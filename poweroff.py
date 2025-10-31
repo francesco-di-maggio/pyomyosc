@@ -5,7 +5,7 @@ Powers off all Myos (deep sleep mode).
 Myos will NOT wake from gestures - requires USB charging to turn back on.
 
 Usage:
-    source venv/bin/activate
+    source .venv/bin/activate
     python3 poweroff.py
 """
 

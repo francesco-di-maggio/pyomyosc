@@ -3,7 +3,7 @@ Myo MAC Address Scanner
 Run this once to find MAC addresses, then add them to pyomyosc.py
 
 Usage:
-    source venv/bin/activate
+    source .venv/bin/activate
     python3 scan.py
 """
 

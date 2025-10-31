@@ -14,8 +14,8 @@ Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP,
 ```bash
 git clone https://github.com/francesco-di-maggio/pyomyosc.git
 cd pyomyosc
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip3 install -r requirements.txt
 ```
 
@@ -32,7 +32,7 @@ pip3 install -r requirements.txt
 
 First, run the scanner to find your Myo MAC addresses:
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 python3 scan.py
 ```
 
@@ -63,13 +63,17 @@ MYO_MAC_ADDRESSES = [
 
 Activate virtual environment and run:
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 python3 pyomyosc.py
 ```
 
 Each Myo vibrates once when successfully connected. The system auto-detects which dongle works with each Myo.
 
-**Note:** `source venv/bin/activate` must be run in every new terminal window.
+**Note:** Remember to activate the virtual environment (`source .venv/bin/activate`) in every new terminal window. Your prompt will show `(.venv)` when activated.
+
+**When done:**
+- Press Ctrl+C to stop - Myo vibrates and disconnects (goes to sleep)
+- For deep sleep: `python3 poweroff.py` (requires USB charging to wake)
 
 ## OSC Messages
 
@@ -178,51 +182,17 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 - **scan.py** - MAC address scanner utility
 - **pyomyosc.maxpat** - Max/MSP example patch
 
-## Workflow
-
-**Setup once:**
-```bash
-git clone https://github.com/francesco-di-maggio/pyomyosc.git
-cd pyomyosc
-python3 -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
-```
-
-**Every session (each new terminal window):**
-```bash
-cd pyomyosc
-source venv/bin/activate  # Required for every new terminal
-python3 pyomyosc.py
-```
-
-Your prompt will show `(venv)` when activated.
-
-**In Max/MSP:**
-- Receive on port 8000
-- Send commands to port 8001 (if enabled)
-
-**When done:**
-- Press Ctrl+C
-- Myo vibrates and disconnects (goes to sleep)
-
-**Deep sleep (optional):**
-```bash
-python3 poweroff.py  # Requires USB to wake
-```
-
 ## Troubleshooting
 
 ### "Module not found" or "externally-managed-environment"
 
 Make sure virtual environment is activated:
 ```bash
-cd pyomyosc
-source venv/bin/activate
+source .venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-If you see `(venv)` in your prompt, the environment is active.
+If you see `(.venv)` in your prompt, the environment is active.
 
 ### No data in Max/MSP
 1. Check Python shows "Connected to Myo"
@@ -266,7 +236,7 @@ sudo usermod -a -G dialout $USER
 # Log out and log back in
 ```
 
-**Windows:** Use `venv\Scripts\activate` instead of `source venv/bin/activate`
+**Windows:** Use `.venv\Scripts\activate` instead of `source .venv/bin/activate`
 
 ## License
 
