@@ -106,7 +106,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 373.0, 168.0, 22.0 ]
+                    "patching_rect": [ 1188.0, 373.0, 168.0, 22.0 ],
+                    "text": "right x_toward_elbow"
                 }
             },
             {
@@ -425,7 +426,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 76.0, 266.0, 165.0, 22.0 ],
-                                    "text": "/myo/1/led 0 200 60 0 200 30"
+                                    "text": "/myo/1/vibrate 1"
                                 }
                             },
                             {
@@ -547,7 +548,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 602.0, 134.0, 185.0, 22.0 ],
-                    "text": "/myo/1/led 0 200 60 0 200 30"
+                    "text": "/myo/1/vibrate 1"
                 }
             },
             {
@@ -568,10 +569,23 @@
                     "numinlets": 1,
                     "numoutlets": 3,
                     "outlettype": [ "int", "", "" ],
-                    "parameter_enable": 0,
+                    "parameter_enable": 1,
                     "patching_rect": [ 451.0, 36.0, 54.0, 23.0 ],
+                    "saved_attribute_attributes": {
+                        "valueof": {
+                            "parameter_enum": [ "1", "2" ],
+                            "parameter_initial": [ 0.0 ],
+                            "parameter_initial_enable": 1,
+                            "parameter_longname": "tab",
+                            "parameter_mmax": 1,
+                            "parameter_modmode": 0,
+                            "parameter_shortname": "tab",
+                            "parameter_type": 2
+                        }
+                    },
                     "tabcolor": [ 0.1843137254901961, 0.17647058823529413, 0.17647058823529413, 1.0 ],
-                    "tabs": [ "1", "2" ]
+                    "tabs": [ "1", "2" ],
+                    "varname": "tab"
                 }
             },
             {
@@ -636,7 +650,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 493.5, 373.0, 168.0, 22.0 ],
-                    "text": "left x_toward_elbow"
+                    "text": "right x_toward_elbow"
                 }
             },
             {
@@ -660,7 +674,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 493.5, 336.5, 97.0, 22.0 ],
-                    "text": "rest"
+                    "text": "fingers_spread"
                 }
             },
             {
@@ -1205,6 +1219,18 @@
                 }
             }
         ],
+        "parameters": {
+            "obj-20": [ "tab", "tab", 0 ],
+            "parameterbanks": {
+                "0": {
+                    "index": 0,
+                    "name": "",
+                    "parameters": [ "-", "-", "-", "-", "-", "-", "-", "-" ],
+                    "buttons": [ "-", "-", "-", "-", "-", "-", "-", "-" ]
+                }
+            },
+            "inherited_shortname": 1
+        },
         "autosave": 0
     }
 }

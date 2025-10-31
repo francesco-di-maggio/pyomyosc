@@ -79,12 +79,12 @@ SEND_POSE = True          # Gesture detection
 SEND_ARM = True           # Arm detection (left/right)
 
 # Debug Output (set to True to see data in terminal)
-DEBUG_CONNECTION = False  # Show connection messages and battery updates
+DEBUG_CONNECTION = True  # Show connection messages and battery updates
 DEBUG_COMMANDS = False    # Show incoming OSC commands
 
 # =======================================================
 
-print("=" * 60)
+print("\n" + "=" * 60)
 print("pyomyosc - Myo OSC Bridge")
 print("=" * 60)
 print(f"OSC target: {OSC_IP}:{OSC_PORT}")
@@ -108,6 +108,62 @@ def detect_dongles():
         if re.search(r'PID=2458:0*1', p[2]):  # Thalmic Labs Myo dongle
             dongles.append(p[0])
     return dongles
+
+
+def connect_with_timeout(myo, mac_addr, timeout=6):
+    """
+    Attempt to connect to Myo with a timeout.
+    Returns (success, error_message)
+    """
+    result = {'success': False, 'error': None}
+
+    def connect_thread():
+        try:
+            myo.connect(mac_addr)
+            result['success'] = True
+        except Exception as e:
+            result['error'] = str(e)
+
+    thread = threading.Thread(target=connect_thread, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout)
+
+    if thread.is_alive():
+        return (False, f"Timeout after {timeout}s")
+
+    if result['success']:
+        return (True, None)
+    else:
+        return (False, result['error'] or "Unknown error")
+
+
+def find_working_dongle(mac_addr, dongles, emg_mode):
+    """
+    Try each dongle until we find one that connects to this Myo.
+    Returns (Myo object, tty) or (None, None) if all fail.
+    """
+    for tty in dongles:
+        if DEBUG_CONNECTION:
+            print(f"  Trying dongle {tty}...")
+
+        try:
+            m = Myo(tty=tty, mode=emg_mode)
+            time.sleep(1)  # Give dongle time to initialize
+
+            success, error = connect_with_timeout(m, mac_addr, timeout=6)
+
+            if success:
+                if DEBUG_CONNECTION:
+                    print(f"  SUCCESS with {tty}!")
+                return (m, tty)
+            else:
+                if DEBUG_CONNECTION:
+                    print(f"  Failed: {error}")
+        except Exception as e:
+            if DEBUG_CONNECTION:
+                print(f"  Error with {tty}: {e}")
+
+    return (None, None)
 
 
 def clamp_rgb(value):
@@ -227,41 +283,32 @@ def start_osc_server():
     server_thread.start()
 
 
-def myo_worker(myo_index, mac_addr, tty):
+def myo_worker(myo_index, mac_addr, available_dongles):
     """
     Worker thread for a single Myo armband.
-
-    Each Myo runs in its own thread with its own dongle, allowing
-    simultaneous data streaming from multiple devices.
+    Auto-detects which dongle works with this Myo.
     """
     try:
         # Create per-Myo command queue for OSC commands (vibrate, LED)
         command_queues[myo_index] = queue.Queue()
 
-        # Initialize Myo with dedicated dongle
-        m = Myo(tty=tty, mode=EMG_MODE)
+        if DEBUG_CONNECTION:
+            print(f"Myo {myo_index}: Trying {len(available_dongles)} dongle(s)...")
+        else:
+            print(f"Myo {myo_index}: Connecting...")
 
-        # Connect with retry logic (BLE can be flaky)
-        print(f"Myo {myo_index}: Connecting...")
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                m.connect(mac_addr)
-                break  # Connection successful
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    print(f"Myo {myo_index}: Attempt {attempt + 1} failed, retrying...")
-                    time.sleep(1)
-                else:
-                    print(f"Myo {myo_index}: Failed after {max_retries} attempts - {e}")
-                    connection_events[myo_index].set()  # Signal failure to main thread
-                    return
+        m, tty = find_working_dongle(mac_addr, available_dongles, EMG_MODE)
 
-        # Identification: vibrate N times (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.)
-        for _ in range(1): # Vibrate once when connected'
-        # for _ in range(myo_index): # Vibrate N times
-            m.vibrate(1) # Short vibration
-            time.sleep(0.5) # Pause between vibrations
+        if m is None:
+            print(f"Myo {myo_index}: Failed - no compatible dongle found")
+            connection_events[myo_index].set()
+            return
+
+        print(f"Myo {myo_index}: Connected via {tty}")
+
+        # Vibrate once to confirm connection
+        m.vibrate(1)
+        time.sleep(0.5)
 
         # Store Myo instance with thread safety
         with myos_lock:
@@ -332,12 +379,11 @@ try:
 
     print(f"\nConnecting to {len(MYO_MAC_ADDRESSES)} Myo(s)...\n")
 
-    # Show identification info for multiple Myos
+    # Show connection info
     if len(MYO_MAC_ADDRESSES) > 1:
-        print("Each Myo will vibrate to identify itself:")
-        print("  1 vibration  = Myo 1")
-        print("  2 vibrations = Myo 2")
-        print("  3 vibrations = Myo 3, etc.\n")
+        print("Each Myo will auto-detect its compatible dongle.\n")
+    else:
+        print()
 
     # ===== INITIALIZATION =====
     # Start OSC command server (runs in background thread)
@@ -349,21 +395,40 @@ try:
         connection_events[i] = threading.Event()
 
     # ===== CONNECTION PHASE =====
-    # Start Myos sequentially to avoid BLE interference
+    # Start Myos sequentially - each finds its own compatible dongle
+    available_dongles = dongles.copy()
+
     for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
-        tty = dongles[i - 1]
-        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, tty), daemon=True)
+        # Pass copy of available dongles to avoid race conditions
+        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, available_dongles.copy()), daemon=True)
         thread.start()
 
         # Wait for connection (or failure) before starting next Myo
-        if not connection_events[i].wait(timeout=15):
+        # Timeout: 8s per available dongle (6s attempt + 1s init + 1s overhead)
+        timeout = len(available_dongles) * 8
+        if not connection_events[i].wait(timeout=max(timeout, 8)):
             print(f"\nERROR: Myo {i} connection timeout. Exiting...")
             exit(1)
+
+        # Remove the dongle that was successfully used
+        with myos_lock:
+            for myo_idx, myo_obj in myos:
+                if myo_idx == i:
+                    used_tty = myo_obj.bt.ser.port
+                    if used_tty in available_dongles:
+                        available_dongles.remove(used_tty)
+                    break
 
     # ===== STREAMING PHASE =====
     print("\n" + "=" * 60)
     print("All Myos connected! Streaming OSC data...")
     print("=" * 60)
+
+    # Show connection summary
+    with myos_lock:
+        for myo_idx, myo_obj in sorted(myos):
+            tty = myo_obj.bt.ser.port
+            print(f"  Myo {myo_idx} -> {tty}")
 
     # Show outgoing data streams
     print(f"\nOutgoing data (port {OSC_PORT}):")

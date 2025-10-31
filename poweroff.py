@@ -58,10 +58,9 @@ for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
         m.connect(mac_addr)
         print(f"  Connected!")
 
-        # Vibrate to identify which Myo
-        for _ in range(i):
-            m.vibrate(1)
-            time.sleep(0.2)
+        # Vibrate once to confirm connection
+        m.vibrate(1)
+        time.sleep(0.3)
 
         myos.append((i, m))
     except Exception as e:

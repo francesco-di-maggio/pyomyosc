@@ -67,7 +67,7 @@ source venv/bin/activate
 python3 pyomyosc.py
 ```
 
-Each Myo vibrates to identify itself (1 vibration = Myo 1, 2 vibrations = Myo 2, etc.).
+Each Myo vibrates once when successfully connected. The system auto-detects which dongle works with each Myo.
 
 **Note:** `source venv/bin/activate` must be run in every new terminal window.
 
@@ -124,9 +124,8 @@ SEND_POSE = True
 SEND_ARM = True
 
 # Debug Output
-DEBUG_EMG = False
-DEBUG_IMU = False
-DEBUG_COMMANDS = False
+DEBUG_CONNECTION = False  # Connection and battery info
+DEBUG_COMMANDS = False     # OSC command logging
 ```
 
 ## Data Ranges
