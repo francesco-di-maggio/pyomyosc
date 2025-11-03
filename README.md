@@ -73,7 +73,7 @@ Each Myo vibrates once when successfully connected. The system auto-detects whic
 
 **When done:**
 - Press Ctrl+C to stop - Myo vibrates and disconnects (goes to sleep)
-- For deep sleep: `python3 poweroff.py` (requires USB charging to wake)
+- For deep sleep: `python3 shutdown.py` (requires USB charging to wake)
 
 ## OSC Messages
 
@@ -178,7 +178,7 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 ## Files
 
 - **pyomyosc.py** - Main OSC bridge script
-- **poweroff.py** - Power off utility (deep sleep)
+- **shutdown.py** - Shutdown utility (deep sleep)
 - **scan.py** - MAC address scanner utility
 - **pyomyosc.maxpat** - Max/MSP example patch
 

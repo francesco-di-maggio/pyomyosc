@@ -1,12 +1,12 @@
 """
-Myo Power Off Utility
+Myo Shutdown Utility
 
 Powers off all Myos (deep sleep mode).
 Myos will NOT wake from gestures - requires USB charging to turn back on.
 
 Usage:
     source .venv/bin/activate
-    python3 poweroff.py
+    python3 shutdown.py
 """
 
 import time
@@ -40,7 +40,7 @@ def detect_dongles():
     return dongles
 
 print("=" * 60)
-print("Myo Power Off Utility")
+print("Myo Shutdown Utility")
 print("=" * 60)
 
 dongles = detect_dongles()

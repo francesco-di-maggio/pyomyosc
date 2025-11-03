@@ -164,9 +164,17 @@ def find_working_dongle(mac_addr, dongles, emg_mode):
             else:
                 if DEBUG_CONNECTION:
                     print(f"  Failed: {error}")
+                # Clean up failed connection attempt
+                try:
+                    if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
+                        m.bt.ser.close()
+                except:
+                    pass
+                time.sleep(0.5)  # Brief delay before trying next dongle
         except Exception as e:
             if DEBUG_CONNECTION:
                 print(f"  Error with {tty}: {e}")
+            time.sleep(0.5)  # Brief delay before trying next dongle
 
     return None, None
 
