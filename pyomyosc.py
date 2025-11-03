@@ -317,7 +317,6 @@ def myo_worker(myo_index, mac_addr, all_dongles):
 
         # Vibrate once to confirm connection
         m.vibrate(1)
-        time.sleep(0.5)
 
         # Store Myo instance with thread safety
         with myos_lock:
@@ -414,7 +413,6 @@ try:
         thread.start()
 
         # Wait for connection (or failure) before starting next Myo
-        # Timeout: 10s per dongle (enough time to try all and retry)
         timeout = len(dongles) * 10
         if not connection_events[i].wait(timeout=max(timeout, 10)):
             print(f"\nERROR: Myo {i} connection timeout. Exiting...")
@@ -473,20 +471,19 @@ except KeyboardInterrupt:
         with myos_lock:
             for myo_index, m in myos:
                 try:
-                    m.vibrate(1)  # Vibrate to confirm disconnect
-                    time.sleep(0.3)  # Let vibration complete
+                    m.vibrate(1)
                     m.disconnect()
 
-                    # Properly close serial connection
+                    # Close serial connection
                     if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
                         try:
                             m.bt.ser.close()
                         except:
                             pass
 
-                    time.sleep(0.1)  # Let disconnect complete
+                    time.sleep(0.2)
                 except Exception:
-                    pass  # Ignore disconnect errors
+                    pass
 
         # Clear used dongles list so they can be reused
         used_dongles.clear()
