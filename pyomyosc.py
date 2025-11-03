@@ -99,6 +99,7 @@ myos = []
 command_queues = {}  # Dictionary of queues, one per Myo index
 connection_events = {}  # Events to signal when each Myo is connected
 myos_lock = threading.Lock()  # Lock for thread-safe access to myos list
+used_dongles = []  # Simple list of dongles already connected
 
 
 def detect_dongles():
@@ -140,9 +141,16 @@ def connect_with_timeout(myo, mac_addr, timeout=6):
 def find_working_dongle(mac_addr, dongles, emg_mode):
     """
     Try each dongle until we find one that connects to this Myo.
+    Skips dongles in the used_dongles list.
     Returns (Myo object, tty) or (None, None) if all fail.
     """
     for tty in dongles:
+        # Skip dongles already in use
+        if tty in used_dongles:
+            if DEBUG_CONNECTION:
+                print(f"  Skipping {tty} (in use)")
+            continue
+
         if DEBUG_CONNECTION:
             print(f"  Trying dongle {tty}...")
 
@@ -150,9 +158,10 @@ def find_working_dongle(mac_addr, dongles, emg_mode):
             m = Myo(tty=tty, mode=emg_mode)
             time.sleep(1)  # Give dongle time to initialize
 
-            success, error = connect_with_timeout(m, mac_addr, timeout=6)
+            success, error = connect_with_timeout(m, mac_addr, timeout=8)
 
             if success:
+                used_dongles.append(tty)  # Mark as used
                 if DEBUG_CONNECTION:
                     print(f"  SUCCESS with {tty}!")
                 return (m, tty)
@@ -283,7 +292,7 @@ def start_osc_server():
     server_thread.start()
 
 
-def myo_worker(myo_index, mac_addr, available_dongles):
+def myo_worker(myo_index, mac_addr, all_dongles):
     """
     Worker thread for a single Myo armband.
     Auto-detects which dongle works with this Myo.
@@ -293,11 +302,11 @@ def myo_worker(myo_index, mac_addr, available_dongles):
         command_queues[myo_index] = queue.Queue()
 
         if DEBUG_CONNECTION:
-            print(f"Myo {myo_index}: Trying {len(available_dongles)} dongle(s)...")
+            print(f"Myo {myo_index}: Trying {len(all_dongles)} dongle(s)...")
         else:
             print(f"Myo {myo_index}: Connecting...")
 
-        m, tty = find_working_dongle(mac_addr, available_dongles, EMG_MODE)
+        m, tty = find_working_dongle(mac_addr, all_dongles, EMG_MODE)
 
         if m is None:
             print(f"Myo {myo_index}: Failed - no compatible dongle found")
@@ -348,8 +357,9 @@ def myo_worker(myo_index, mac_addr, available_dongles):
             m.run()
 
     except Exception as e:
-        # Ignore "device reports readiness" errors during Ctrl+C shutdown
-        if "device reports readiness" not in str(e):
+        # Suppress common disconnect/shutdown errors
+        error_msg = str(e).lower()
+        if "device reports readiness" not in error_msg and "keyboard" not in error_msg:
             print(f"Myo {myo_index} error: {e}")
 
 
@@ -396,28 +406,19 @@ try:
 
     # ===== CONNECTION PHASE =====
     # Start Myos sequentially - each finds its own compatible dongle
-    available_dongles = dongles.copy()
+    # The used_dongles_set is shared and prevents race conditions
 
     for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
-        # Pass copy of available dongles to avoid race conditions
-        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, available_dongles.copy()), daemon=True)
+        # Pass all dongles - worker will skip ones already in use
+        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, dongles), daemon=True)
         thread.start()
 
         # Wait for connection (or failure) before starting next Myo
-        # Timeout: 4s per available dongle
-        timeout = len(available_dongles) * 4
-        if not connection_events[i].wait(timeout=max(timeout, 4)):
+        # Timeout: 10s per dongle (enough time to try all and retry)
+        timeout = len(dongles) * 10
+        if not connection_events[i].wait(timeout=max(timeout, 10)):
             print(f"\nERROR: Myo {i} connection timeout. Exiting...")
             exit(1)
-
-        # Remove the dongle that was successfully used
-        with myos_lock:
-            for myo_idx, myo_obj in myos:
-                if myo_idx == i:
-                    used_tty = myo_obj.bt.ser.port
-                    if used_tty in available_dongles:
-                        available_dongles.remove(used_tty)
-                    break
 
     # ===== STREAMING PHASE =====
     print("\n" + "=" * 60)
@@ -472,10 +473,25 @@ except KeyboardInterrupt:
         with myos_lock:
             for myo_index, m in myos:
                 try:
+                    m.vibrate(1)  # Vibrate to confirm disconnect
+                    time.sleep(0.3)  # Let vibration complete
                     m.disconnect()
+
+                    # Properly close serial connection
+                    if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
+                        try:
+                            m.bt.ser.close()
+                        except:
+                            pass
+
+                    time.sleep(0.1)  # Let disconnect complete
                 except Exception:
                     pass  # Ignore disconnect errors
-        print("Disconnected.")
+
+        # Clear used dongles list so they can be reused
+        used_dongles.clear()
+
+        print("Disconnected. Wait 2-3 seconds before restarting.")
     except KeyboardInterrupt:
         print("Force quit.")
 
