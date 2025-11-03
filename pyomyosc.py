@@ -28,7 +28,7 @@ Incoming OSC Commands (port 8001, optional):
     /myo/N/led [r g b] - Set LED color (RGB 0-255)
 
 Usage:
-    source venv/bin/activate  # Activate virtual environment
+    source .venv/bin/activate
     python3 pyomyosc.py
 """
 
@@ -104,14 +104,10 @@ used_dongles = []  # Simple list of dongles already connected
 
 def detect_dongles():
     """Detect all available Myo dongles by USB vendor/product ID"""
-    dongles = []
-    for p in comports():
-        if re.search(r'PID=2458:0*1', p[2]):  # Thalmic Labs Myo dongle
-            dongles.append(p[0])
-    return dongles
+    return [p[0] for p in comports() if re.search(r'PID=2458:0*1', p[2])]
 
 
-def connect_with_timeout(myo, mac_addr, timeout=6):
+def connect_with_timeout(myo, mac_addr, timeout=8):
     """
     Attempt to connect to Myo with a timeout.
     Returns (success, error_message)
@@ -130,12 +126,12 @@ def connect_with_timeout(myo, mac_addr, timeout=6):
     thread.join(timeout=timeout)
 
     if thread.is_alive():
-        return (False, f"Timeout after {timeout}s")
+        return False, f"Timeout after {timeout}s"
 
     if result['success']:
-        return (True, None)
-    else:
-        return (False, result['error'] or "Unknown error")
+        return True, None
+
+    return False, result['error'] or "Unknown error"
 
 
 def find_working_dongle(mac_addr, dongles, emg_mode):
@@ -158,13 +154,13 @@ def find_working_dongle(mac_addr, dongles, emg_mode):
             m = Myo(tty=tty, mode=emg_mode)
             time.sleep(1)  # Give dongle time to initialize
 
-            success, error = connect_with_timeout(m, mac_addr, timeout=8)
+            success, error = connect_with_timeout(m, mac_addr)
 
             if success:
-                used_dongles.append(tty)  # Mark as used
+                used_dongles.append(tty)
                 if DEBUG_CONNECTION:
                     print(f"  SUCCESS with {tty}!")
-                return (m, tty)
+                return m, tty
             else:
                 if DEBUG_CONNECTION:
                     print(f"  Failed: {error}")
@@ -172,12 +168,17 @@ def find_working_dongle(mac_addr, dongles, emg_mode):
             if DEBUG_CONNECTION:
                 print(f"  Error with {tty}: {e}")
 
-    return (None, None)
+    return None, None
 
 
 def clamp_rgb(value):
     """Clamp RGB value to valid range 0-255"""
     return max(0, min(255, int(value)))
+
+
+def get_myo_index(address):
+    """Extract Myo index from OSC address (e.g., /myo/1/vibrate -> 1)"""
+    return int(address.split('/')[2])
 
 
 def parse_enum_name(enum_value):
@@ -229,22 +230,23 @@ def handle_vibrate(address, *args):
     """Handle incoming /myo/N/vibrate command from Max"""
     try:
         if len(args) < 1:
-            print(f"Vibrate: missing intensity argument (send /myo/N/vibrate [1-3])")
+            print("Vibrate: missing intensity (send /myo/N/vibrate [1-3])")
             return
 
-        # Extract myo index from address: /myo/1/vibrate -> 1
-        myo_index = int(address.split('/')[2])
+        myo_index = get_myo_index(address)
         intensity = int(args[0])
 
-        if 1 <= intensity <= 3:
-            if myo_index in command_queues:
-                command_queues[myo_index].put(('vibrate', intensity))
-                if DEBUG_COMMANDS:
-                    print(f"Command queued: Myo {myo_index} vibrate {intensity}")
-            else:
-                print(f"Vibrate: Myo {myo_index} not connected")
-        else:
+        if not (1 <= intensity <= 3):
             print(f"Vibrate: invalid intensity {intensity} (must be 1-3)")
+            return
+
+        if myo_index not in command_queues:
+            print(f"Vibrate: Myo {myo_index} not connected")
+            return
+
+        command_queues[myo_index].put(('vibrate', intensity))
+        if DEBUG_COMMANDS:
+            print(f"Command queued: Myo {myo_index} vibrate {intensity}")
     except Exception as e:
         print(f"Vibrate error: {e}")
 
@@ -253,11 +255,10 @@ def handle_led(address, *args):
     """Handle incoming /myo/N/led command from Max"""
     try:
         if len(args) < 3:
-            print(f"LED: invalid arguments (send /myo/N/led [r g b])")
+            print("LED: invalid arguments (send /myo/N/led [r g b])")
             return
 
-        # Extract myo index from address: /myo/1/led -> 1
-        myo_index = int(address.split('/')[2])
+        myo_index = get_myo_index(address)
 
         if myo_index not in command_queues:
             print(f"LED: Myo {myo_index} not connected")
@@ -265,16 +266,17 @@ def handle_led(address, *args):
 
         if len(args) == 3:
             # Same color for both logo and bar LEDs
-            r, g, b = [clamp_rgb(v) for v in args]
-            command_queues[myo_index].put(('led', [r, g, b], [r, g, b]))
+            rgb = [clamp_rgb(v) for v in args]
+            command_queues[myo_index].put(('led', rgb, rgb))
             if DEBUG_COMMANDS:
-                print(f"Command queued: Myo {myo_index} LED RGB({r}, {g}, {b})")
+                print(f"Command queued: Myo {myo_index} LED RGB{tuple(rgb)}")
         elif len(args) == 6:
             # Separate colors for logo and bar LEDs
-            r1, g1, b1, r2, g2, b2 = [clamp_rgb(v) for v in args]
-            command_queues[myo_index].put(('led', [r1, g1, b1], [r2, g2, b2]))
+            logo = [clamp_rgb(v) for v in args[:3]]
+            bar = [clamp_rgb(v) for v in args[3:]]
+            command_queues[myo_index].put(('led', logo, bar))
             if DEBUG_COMMANDS:
-                print(f"Command queued: Myo {myo_index} LED Logo RGB({r1}, {g1}, {b1}), Bar RGB({r2}, {g2}, {b2})")
+                print(f"Command queued: Myo {myo_index} LED Logo{tuple(logo)}, Bar{tuple(bar)}")
         else:
             print(f"LED: invalid args (need 3 or 6 values, got {len(args)})")
     except Exception as e:
@@ -323,12 +325,12 @@ def myo_worker(myo_index, mac_addr, all_dongles):
             myos.append((myo_index, m))
 
         # Create and register handlers
-        handlers = create_handlers(myo_index)
-        m.add_emg_handler(handlers[0])
-        m.add_imu_handler(handlers[1])
-        m.add_battery_handler(handlers[2])
-        m.add_pose_handler(handlers[3])
-        m.add_arm_handler(handlers[4])
+        emg_h, imu_h, battery_h, pose_h, arm_h = create_handlers(myo_index)
+        m.add_emg_handler(emg_h)
+        m.add_imu_handler(imu_h)
+        m.add_battery_handler(battery_h)
+        m.add_pose_handler(pose_h)
+        m.add_arm_handler(arm_h)
 
         # Signal connection success to main thread
         print(f"Myo {myo_index}: Ready!\n")
@@ -338,19 +340,19 @@ def myo_worker(myo_index, mac_addr, all_dongles):
         while True:
             # Check for incoming OSC commands (non-blocking)
             try:
-                cmd = command_queues[myo_index].get_nowait()
-                if cmd[0] == 'vibrate':
-                    m.vibrate(cmd[1])
+                cmd_type, *cmd_args = command_queues[myo_index].get_nowait()
+                if cmd_type == 'vibrate':
+                    m.vibrate(cmd_args[0])
                     if DEBUG_COMMANDS:
-                        print(f"Executed: Myo {myo_index} vibrate {cmd[1]}")
-                elif cmd[0] == 'led':
-                    m.set_leds(cmd[1], cmd[2])  # logo_color, bar_color
+                        print(f"Executed: Myo {myo_index} vibrate {cmd_args[0]}")
+                elif cmd_type == 'led':
+                    m.set_leds(cmd_args[0], cmd_args[1])
                     if DEBUG_COMMANDS:
-                        print(f"Executed: Myo {myo_index} LED {cmd[1]}")
+                        print(f"Executed: Myo {myo_index} LED {cmd_args[0]}")
             except queue.Empty:
-                pass  # No commands queued
+                pass
             except Exception as e:
-                print(f"Command execution error for Myo {myo_index}: {e}")
+                print(f"Command error Myo {myo_index}: {e}")
 
             # Read and process Myo data (triggers registered handlers)
             m.run()
@@ -388,14 +390,7 @@ try:
 
     print(f"\nConnecting to {len(MYO_MAC_ADDRESSES)} Myo(s)...\n")
 
-    # Show connection info
-    if len(MYO_MAC_ADDRESSES) > 1:
-        print("Each Myo will auto-detect its compatible dongle.\n")
-    else:
-        print()
-
     # ===== INITIALIZATION =====
-    # Start OSC command server (runs in background thread)
     if ENABLE_OSC_COMMANDS:
         start_osc_server()
 
@@ -404,15 +399,10 @@ try:
         connection_events[i] = threading.Event()
 
     # ===== CONNECTION PHASE =====
-    # Start Myos sequentially - each finds its own compatible dongle
-    # The used_dongles_set is shared and prevents race conditions
-
     for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
-        # Pass all dongles - worker will skip ones already in use
         thread = threading.Thread(target=myo_worker, args=(i, mac_addr, dongles), daemon=True)
         thread.start()
 
-        # Wait for connection (or failure) before starting next Myo
         timeout = len(dongles) * 10
         if not connection_events[i].wait(timeout=max(timeout, 10)):
             print(f"\nERROR: Myo {i} connection timeout. Exiting...")
@@ -429,30 +419,14 @@ try:
             tty = myo_obj.bt.ser.port
             print(f"  Myo {myo_idx} -> {tty}")
 
-    # Show outgoing data streams
     print(f"\nOutgoing data (port {OSC_PORT}):")
-    if len(MYO_MAC_ADDRESSES) == 1:
-        print("  /myo/1/emg      - 8-channel EMG data")
-        print("  /myo/1/quat     - Quaternion orientation")
-        print("  /myo/1/accel    - Accelerometer")
-        print("  /myo/1/gyro     - Gyroscope")
-        print("  /myo/1/battery  - Battery level")
-        print("  /myo/1/pose     - Gesture detection")
-        print("  /myo/1/arm      - Arm detection")
-    else:
-        print("  /myo/N/emg, /myo/N/quat, /myo/N/accel, /myo/N/gyro")
-        print("  /myo/N/battery, /myo/N/pose, /myo/N/arm")
-        print("  (N = 1, 2, 3, etc.)")
+    print("  /myo/N/emg, /myo/N/quat, /myo/N/accel, /myo/N/gyro")
+    print("  /myo/N/battery, /myo/N/pose, /myo/N/arm")
 
-    # Show incoming commands if enabled
     if ENABLE_OSC_COMMANDS:
         print(f"\nIncoming commands (port {OSC_COMMAND_PORT}):")
-        if len(MYO_MAC_ADDRESSES) == 1:
-            print("  /myo/1/vibrate [1-3]  - Trigger vibration")
-            print("  /myo/1/led [r g b]    - Set LED color")
-        else:
-            print("  /myo/N/vibrate [1-3]  - Trigger vibration")
-            print("  /myo/N/led [r g b]    - Set LED color")
+        print("  /myo/N/vibrate [1-3]")
+        print("  /myo/N/led [r g b]")
 
     print("\n" + "=" * 60)
     print("Press Ctrl+C to stop")
@@ -463,32 +437,23 @@ try:
         time.sleep(1)
 
 except KeyboardInterrupt:
-    # ===== SHUTDOWN =====
     print("\n\nStopping...")
-
-    # Attempt graceful disconnect (second Ctrl+C forces immediate quit)
     try:
         with myos_lock:
             for myo_index, m in myos:
                 try:
                     m.vibrate(1)
                     m.disconnect()
-
-                    # Close serial connection
                     if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
                         try:
                             m.bt.ser.close()
                         except:
                             pass
-
                     time.sleep(0.2)
                 except Exception:
                     pass
-
-        # Clear used dongles list so they can be reused
         used_dongles.clear()
-
-        print("Disconnected. Wait 2-3 seconds before restarting.")
+        print("Disconnected.")
     except KeyboardInterrupt:
         print("Force quit.")
 
