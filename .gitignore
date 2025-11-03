@@ -26,3 +26,6 @@ Thumbs.db
 
 # Max/MSP
 *.autosave
+
+# PyoMyo
+.pyomyo/
