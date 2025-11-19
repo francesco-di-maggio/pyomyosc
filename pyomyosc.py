@@ -5,7 +5,7 @@ Connects to one or more Myo armbands and streams data via OSC
 Setup:
     1. Run: python3 scan.py (to find MAC addresses in decimal format)
     2. Edit MYO_MAC_ADDRESSES in this file
-    3. Run: python3 pyomyosc.py
+    3. Run: python3 start.py
 
 Configuration:
     MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241]]  # Single Myo
@@ -29,7 +29,7 @@ Incoming OSC Commands (port 8001, optional):
 
 Usage:
     source .venv/bin/activate
-    python3 pyomyosc.py
+    python3 start.py
 """
 
 from pyomyo import Myo, emg_mode
@@ -98,85 +98,12 @@ osc_client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
 myos = []
 command_queues = {}  # Dictionary of queues, one per Myo index
 connection_events = {}  # Events to signal when each Myo is connected
-myos_lock = threading.Lock()  # Lock for thread-safe access to myos list
-used_dongles = []  # Simple list of dongles already connected
+shutdown_event = threading.Event()  # Signal for clean shutdown
 
 
 def detect_dongles():
     """Detect all available Myo dongles by USB vendor/product ID"""
     return [p[0] for p in comports() if re.search(r'PID=2458:0*1', p[2])]
-
-
-def connect_with_timeout(myo, mac_addr, timeout=8):
-    """
-    Attempt to connect to Myo with a timeout.
-    Returns (success, error_message)
-    """
-    result = {'success': False, 'error': None}
-
-    def connect_thread():
-        try:
-            myo.connect(mac_addr)
-            result['success'] = True
-        except Exception as e:
-            result['error'] = str(e)
-
-    thread = threading.Thread(target=connect_thread, daemon=True)
-    thread.start()
-    thread.join(timeout=timeout)
-
-    if thread.is_alive():
-        return False, f"Timeout after {timeout}s"
-
-    if result['success']:
-        return True, None
-
-    return False, result['error'] or "Unknown error"
-
-
-def find_working_dongle(mac_addr, dongles, emg_mode):
-    """
-    Try each dongle until we find one that connects to this Myo.
-    Skips dongles in the used_dongles list.
-    Returns (Myo object, tty) or (None, None) if all fail.
-    """
-    for tty in dongles:
-        # Skip dongles already in use
-        if tty in used_dongles:
-            if DEBUG_CONNECTION:
-                print(f"  Skipping {tty} (in use)")
-            continue
-
-        if DEBUG_CONNECTION:
-            print(f"  Trying dongle {tty}...")
-
-        try:
-            m = Myo(tty=tty, mode=emg_mode)
-            time.sleep(1)  # Give dongle time to initialize
-
-            success, error = connect_with_timeout(m, mac_addr)
-
-            if success:
-                used_dongles.append(tty)
-                if DEBUG_CONNECTION:
-                    print(f"  SUCCESS with {tty}!")
-                return m, tty
-            else:
-                if DEBUG_CONNECTION:
-                    print(f"  Failed: {error}")
-                # Clean up failed connection attempt
-                try:
-                    if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
-                        m.bt.ser.close()
-                except:
-                    pass
-                time.sleep(0.5)  # Brief delay before trying next dongle
-        except Exception as e:
-            if DEBUG_CONNECTION:
-                print(f"  Error with {tty}: {e}")
-            time.sleep(0.5)  # Brief delay before trying next dongle
-
-    return None, None
 
 
 def clamp_rgb(value):
@@ -302,35 +229,31 @@ def start_osc_server():
     server_thread.start()
 
 
-def myo_worker(myo_index, mac_addr, all_dongles):
+def myo_worker(myo_index, mac_addr, dongle):
     """
     Worker thread for a single Myo armband.
-    Auto-detects which dongle works with this Myo.
+    Each Myo connects via its assigned dongle.
     """
     try:
         # Create per-Myo command queue for OSC commands (vibrate, LED)
         command_queues[myo_index] = queue.Queue()
 
         if DEBUG_CONNECTION:
-            print(f"Myo {myo_index}: Trying {len(all_dongles)} dongle(s)...")
+            print(f"Myo {myo_index}: Connecting via {dongle}...")
         else:
             print(f"Myo {myo_index}: Connecting...")
 
-        m, tty = find_working_dongle(mac_addr, all_dongles, EMG_MODE)
+        # Create Myo instance and connect
+        m = Myo(tty=dongle, mode=EMG_MODE)
+        m.connect(mac_addr)
 
-        if m is None:
-            print(f"Myo {myo_index}: Failed - no compatible dongle found")
-            connection_events[myo_index].set()
-            return
-
-        print(f"Myo {myo_index}: Connected via {tty}")
+        print(f"Myo {myo_index}: Connected via {dongle}")
 
         # Vibrate once to confirm connection
         m.vibrate(1)
 
-        # Store Myo instance with thread safety
-        with myos_lock:
-            myos.append((myo_index, m))
+        # Store Myo instance
+        myos.append((myo_index, m))
 
         # Create and register handlers
         emg_h, imu_h, battery_h, pose_h, arm_h = create_handlers(myo_index)
@@ -345,7 +268,7 @@ def myo_worker(myo_index, mac_addr, all_dongles):
         connection_events[myo_index].set()
 
         # Main data loop: process commands and read Myo data
-        while True:
+        while not shutdown_event.is_set():
             # Check for incoming OSC commands (non-blocking)
             try:
                 cmd_type, *cmd_args = command_queues[myo_index].get_nowait()
@@ -370,6 +293,8 @@ def myo_worker(myo_index, mac_addr, all_dongles):
         error_msg = str(e).lower()
         if "device reports readiness" not in error_msg and "keyboard" not in error_msg:
             print(f"Myo {myo_index} error: {e}")
+        # Signal failure so main thread doesn't hang
+        connection_events[myo_index].set()
 
 
 # ==================== MAIN ====================
@@ -380,7 +305,7 @@ try:
         print("\nERROR: No MAC addresses configured")
         print("\nTo find your Myo MAC addresses:")
         print("  python3 scan.py")
-        print("\nThen edit MYO_MAC_ADDRESSES in pyomyosc.py:")
+        print("\nThen edit MYO_MAC_ADDRESSES in start.py:")
         print("  MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241], ...]")
         exit(1)
 
@@ -406,26 +331,38 @@ try:
     for i in range(1, len(MYO_MAC_ADDRESSES) + 1):
         connection_events[i] = threading.Event()
 
-    # ===== CONNECTION PHASE =====
-    for i, mac_addr in enumerate(MYO_MAC_ADDRESSES, 1):
-        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, dongles), daemon=True)
+    # ===== PARALLEL CONNECTION PHASE =====
+    # Start all Myo workers in parallel
+    for i, (mac_addr, dongle) in enumerate(zip(MYO_MAC_ADDRESSES, dongles), 1):
+        thread = threading.Thread(target=myo_worker, args=(i, mac_addr, dongle), daemon=True)
         thread.start()
 
-        timeout = len(dongles) * 10
-        if not connection_events[i].wait(timeout=max(timeout, 10)):
-            print(f"\nERROR: Myo {i} connection timeout. Exiting...")
-            exit(1)
+    # Wait for all connections to complete
+    connection_timeout = 5  # seconds per Myo
+    all_connected = True
+    for i in range(1, len(MYO_MAC_ADDRESSES) + 1):
+        if not connection_events[i].wait(timeout=connection_timeout):
+            print(f"\nWARNING: Myo {i} connection timeout after {connection_timeout}s")
+            all_connected = False
+
+    # Check if we have any successful connections
+    successful_myos = [idx for idx, m in myos]
+    if not successful_myos:
+        print("\nERROR: No Myos connected. Exiting...")
+        exit(1)
 
     # ===== STREAMING PHASE =====
     print("\n" + "=" * 60)
-    print("All Myos connected! Streaming OSC data...")
+    if all_connected:
+        print("All Myos connected! Streaming OSC data...")
+    else:
+        print(f"{len(successful_myos)}/{len(MYO_MAC_ADDRESSES)} Myos connected. Streaming OSC data...")
     print("=" * 60)
 
     # Show connection summary
-    with myos_lock:
-        for myo_idx, myo_obj in sorted(myos):
-            tty = myo_obj.bt.ser.port
-            print(f"  Myo {myo_idx} -> {tty}")
+    for myo_idx, myo_obj in sorted(myos):
+        tty = myo_obj.bt.ser.port
+        print(f"  Myo {myo_idx} -> {tty}")
 
     print(f"\nOutgoing data (port {OSC_PORT}):")
     print("  /myo/N/emg, /myo/N/quat, /myo/N/accel, /myo/N/gyro")
@@ -441,29 +378,21 @@ try:
     print("=" * 60 + "\n")
 
     # Keep main thread alive while workers stream data
-    while True:
-        time.sleep(1)
+    shutdown_event.wait()
 
 except KeyboardInterrupt:
     print("\n\nStopping...")
-    try:
-        with myos_lock:
-            for myo_index, m in myos:
-                try:
-                    m.vibrate(1)
-                    m.disconnect()
-                    if hasattr(m, 'bt') and hasattr(m.bt, 'ser'):
-                        try:
-                            m.bt.ser.close()
-                        except:
-                            pass
-                    time.sleep(0.2)
-                except Exception:
-                    pass
-        used_dongles.clear()
-        print("Disconnected.")
-    except KeyboardInterrupt:
-        print("Force quit.")
+    shutdown_event.set()  # Signal worker threads to stop
+    time.sleep(0.2)  # Give threads time to exit their run() loops
+
+    for myo_index, m in myos:
+        try:
+            m.vibrate(1)
+            m.disconnect()
+        except Exception as e:
+            if DEBUG_CONNECTION:
+                print(f"Myo {myo_index} disconnect: {e}")
+    print("Disconnected.")
 
 except Exception as e:
     print(f"\nError: {e}")

@@ -29,3 +29,6 @@ Thumbs.db
 
 # PyoMyo
 .pyomyo/
+
+# Development files
+.dev/

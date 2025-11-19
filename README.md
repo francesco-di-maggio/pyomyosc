@@ -14,12 +14,19 @@ Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP,
 ```bash
 git clone https://github.com/francesco-di-maggio/pyomyosc.git
 cd pyomyosc
-python3 -m venv .venv
+python -m venv .venv
+# Use python3 instead of python if needed (older macOS/Linux systems)
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-**Note:** Virtual environment is required on modern macOS/Homebrew Python. This keeps dependencies isolated and prevents system conflicts.
+**Note:** Virtual environment is recommended (required on modern macOS/Homebrew Python). This keeps dependencies isolated and prevents system conflicts.
+
+**Quick install (without venv):**
+```bash
+pip install --user pyomyo python-osc pyserial
+python pyomyosc.py  # Use python3 if python points to Python 2.7
+```
 
 ## Quick Start
 
@@ -32,8 +39,8 @@ pip3 install -r requirements.txt
 
 First, run the scanner to find your Myo MAC addresses:
 ```bash
-source .venv/bin/activate
-python3 scan.py
+source .venv/bin/activate  # If using venv
+python scan.py
 ```
 
 The scan will show MAC addresses in decimal format. Copy the output.
@@ -63,17 +70,17 @@ MYO_MAC_ADDRESSES = [
 
 Activate virtual environment and run:
 ```bash
-source .venv/bin/activate
-python3 pyomyosc.py
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+python pyomyosc.py         # Inside venv, 'python' is always Python 3
 ```
 
-Each Myo vibrates once when successfully connected. The system auto-detects which dongle works with each Myo.
+Each Myo vibrates once when successfully connected. Myos connect in parallel for faster startup (~2 seconds for 2 Myos).
 
 **Note:** Remember to activate the virtual environment (`source .venv/bin/activate`) in every new terminal window. Your prompt will show `(.venv)` when activated.
 
 **When done:**
 - Press Ctrl+C to stop - Myo vibrates and disconnects (goes to sleep)
-- For deep sleep: `python3 shutdown.py` (requires USB charging to wake)
+- For deep sleep: `python shutdown.py` (requires USB charging to wake)
 
 ## OSC Messages
 
@@ -186,10 +193,16 @@ For normalized range (-1 to 1): divide accel by 2000, gyro by 1000
 
 ### "Module not found" or "externally-managed-environment"
 
-Make sure virtual environment is activated:
+**With virtual environment (recommended):**
 ```bash
 source .venv/bin/activate
-pip3 install -r requirements.txt
+pip install -r requirements.txt
+```
+
+**Without virtual environment:**
+```bash
+pip install --user -r requirements.txt
+# or: pip3 install --user -r requirements.txt
 ```
 
 If you see `(.venv)` in your prompt, the environment is active.
@@ -206,7 +219,7 @@ If you see `(.venv)` in your prompt, the environment is active.
 3. macOS: Grant Bluetooth permissions if prompted
 4. Try unplug/replug dongle
 5. Check battery level
-6. Run `python3 scan.py` to verify Myo is detectable
+6. Run `python scan.py` to verify Myo is detectable
 
 ### Connection drops
 1. Myo battery ~3 hours - check level
@@ -215,7 +228,7 @@ If you see `(.venv)` in your prompt, the environment is active.
 
 ### Multiple Myos not found
 1. Connect all Myos to USB power before running
-2. Run `python3 scan.py` first to find MAC addresses
+2. Run `python scan.py` first to find MAC addresses
 3. Verify MAC addresses typed correctly in pyomyosc.py
 4. Ensure you have one USB dongle per Myo
 5. Each Myo needs its own dedicated dongle
