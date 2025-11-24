@@ -6,7 +6,7 @@ Myos will NOT wake from gestures - requires USB charging to turn back on.
 
 Usage:
     source .venv/bin/activate
-    python3 shutdown.py
+    python shutdown.py
 """
 
 import time
@@ -16,7 +16,7 @@ import re
 from serial.tools.list_ports import comports
 
 # Myo MAC Addresses (DECIMAL format)
-# Run: python3 scan.py to find your MAC addresses
+# Run: python scan.py to find your MAC addresses
 # Keep synchronized with pyomyosc.py
 #
 # Examples:

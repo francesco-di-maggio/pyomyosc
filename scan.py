@@ -4,40 +4,46 @@ Run this once to find MAC addresses, then add them to pyomyosc.py
 
 Usage:
     source .venv/bin/activate
-    python3 scan.py
+    python scan.py
 """
 
 from pyomyo.pyomyo import BT, multiord
 import serial.tools.list_ports as list_ports
 import time
+import re
+
+def detect_dongles():
+    """Detect all available Myo dongles"""
+    return [p[0] for p in list_ports.comports() if re.search(r'PID=2458:0*1', p[2])]
 
 print("=" * 60)
 print("Myo MAC Address Scanner")
 print("=" * 60)
-print("\nMake sure all Myos are powered on")
-print("Scanning...\n")
 
-# Find Myo dongle
-tty = None
-for p in list_ports.comports():
-    if '2458:0001' in p[2]:
-        tty = p[0]
-        print(f"Found dongle: {tty}\n")
-        break
+# Detect dongles
+dongles = detect_dongles()
 
-if not tty:
-    print("ERROR: Myo dongle not found")
-    print("Make sure USB dongle is plugged in")
+if not dongles:
+    print("\nERROR: No Myo dongles found")
+    print("Make sure USB dongle(s) are plugged in")
     exit(1)
 
-# Scan for Myos
-bt = BT(tty)
+print(f"\nDetected {len(dongles)} Bluetooth dongle(s):")
+for dongle in dongles:
+    print(f"  {dongle}")
+
+print("\nMake sure all Myos are powered on.")
+print("Scanning...\n")
+
+# Scan for Myos using first dongle
+bt = BT(dongles[0])
 bt.discover()
 
 found_myos = []
 start_time = time.time()
+scan_duration = 2
 
-while time.time() - start_time < 4: # Scan for 4 seconds
+while time.time() - start_time < scan_duration:
     p = bt.recv_packet()
 
     # Check if packet is from a Myo
@@ -46,14 +52,14 @@ while time.time() - start_time < 4: # Scan for 4 seconds
         if mac not in found_myos:
             found_myos.append(mac)
             mac_hex = ':'.join([f"{b:02x}" for b in mac])
-            mac_dec = str(mac)
-            print(f"  Found Myo #{len(found_myos)}")
-            print(f"    Hex: {mac_hex}")
-            print(f"    Dec: {mac_dec}")
+            print(f"  > Myo #{len(found_myos)}")
+            print(f"    MAC (hex): {mac_hex}")
+            print(f"    MAC (dec): {mac}\n")
 
 bt.end_scan()
 
-print("\n" + "=" * 60)
+# Results
+print("=" * 60)
 print(f"Scan complete: Found {len(found_myos)} Myo(s)")
 print("=" * 60)
 

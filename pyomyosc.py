@@ -3,9 +3,9 @@ pyomyosc - Unified Myo OSC Bridge
 Connects to one or more Myo armbands and streams data via OSC
 
 Setup:
-    1. Run: python3 scan.py (to find MAC addresses in decimal format)
+    1. Run: python scan.py (to find MAC addresses in decimal format)
     2. Edit MYO_MAC_ADDRESSES in this file
-    3. Run: python3 start.py
+    3. Run: python pyomyosc.py
 
 Configuration:
     MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241]]  # Single Myo
@@ -29,7 +29,7 @@ Incoming OSC Commands (port 8001, optional):
 
 Usage:
     source .venv/bin/activate
-    python3 start.py
+    python pyomyosc.py
 """
 
 from pyomyo import Myo, emg_mode
@@ -58,7 +58,7 @@ EMG_MODE = emg_mode.FILTERED      # -128 to 127, 200Hz (clean audio)
 # EMG_MODE = emg_mode.RAW           # -128 to 127, 200Hz (noisy audio)
 
 # Myo MAC Addresses (DECIMAL format)
-# Run: python3 scan.py to find your MAC addresses
+# Run: python scan.py to find your MAC addresses
 # Examples:
 #   Single Myo:   [[255, 201, 227, 231, 151, 241]]
 #   Multiple Myos: [[mac1], [mac2], ...] (each requires its own USB dongle)
@@ -304,8 +304,8 @@ try:
     if not MYO_MAC_ADDRESSES:
         print("\nERROR: No MAC addresses configured")
         print("\nTo find your Myo MAC addresses:")
-        print("  python3 scan.py")
-        print("\nThen edit MYO_MAC_ADDRESSES in start.py:")
+        print("  python scan.py")
+        print("\nThen edit MYO_MAC_ADDRESSES in pyomyosc.py:")
         print("  MYO_MAC_ADDRESSES = [[255, 201, 227, 231, 151, 241], ...]")
         exit(1)
 
