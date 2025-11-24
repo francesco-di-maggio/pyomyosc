@@ -1,14 +1,17 @@
-# pyomyosc
+# PyoMyOSC
 
 Python OSC bridge for Myo armband(s). Stream EMG, IMU, and gesture data to Max/MSP, Pure Data, or any OSC-compatible software.
 
 ## Requirements
 
+Built on [pyomyo](https://github.com/PerlinWarp/pyomyo), a cross-platform and multithreaded Python library by PerlinWarp. 
+
+**Note:** Works without the Myo SDK.
+
 - Python 3.7+
 - Myo armband(s) with USB Bluetooth dongle(s)
 - **Important:** Each Myo requires its own dedicated USB Bluetooth dongle
 - Max/MSP, Pure Data, or any OSC software (optional)
-- No need for Myo Connect!
 
 ## Installation
 
@@ -232,10 +235,6 @@ If you see `(.venv)` in your prompt, the environment is active.
 2. Run `python scan.py` first to find MAC addresses
 3. Verify MAC addresses typed correctly in pyomyosc.py
 4. Ensure you have one USB dongle per Myo
-
-## Credits
-
-Built on [pyomyo](https://github.com/PerlinWarp/pyomyo) library by PerlinWarp
 
 ## License
 
