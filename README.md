@@ -1,6 +1,6 @@
 # pyomyosc
 
-Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP, Pure Data, or any OSC-compatible software. Supports bidirectional control.
+Python OSC bridge for Myo armband(s). Stream EMG, IMU, and gesture data to Max/MSP, Pure Data, or any OSC-compatible software.
 
 ## Requirements
 
@@ -8,8 +8,11 @@ Python OSC bridge for Myo armband. Stream EMG, IMU, and gesture data to Max/MSP,
 - Myo armband(s) with USB Bluetooth dongle(s)
 - **Important:** Each Myo requires its own dedicated USB Bluetooth dongle
 - Max/MSP, Pure Data, or any OSC software (optional)
+- No need for Myo Connect!
 
 ## Installation
+
+**Install with virtual environment (venv):**
 
 ```bash
 git clone https://github.com/francesco-di-maggio/pyomyosc.git
@@ -20,20 +23,20 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**Note:** Virtual environment is recommended (required on modern macOS/Homebrew Python). This keeps dependencies isolated and prevents system conflicts.
+**Note:** Virtual environment is recommended as it keeps dependencies isolated and prevents system conflicts.
 
 **Quick install (without venv):**
 ```bash
-pip install --user pyomyo python-osc pyserial
-python pyomyosc.py  # Use python3 if python points to Python 2.7
+pip install --user -r requirements.txt
+# or: pip3 install --user -r requirements.txt
 ```
 
 ## Quick Start
 
 ### Hardware Setup
-1. Plug in Myo USB Bluetooth dongle(s) - one per Myo
+1. Plug in Myo USB Bluetooth dongle(s)
 2. Connect Myo to USB power to turn it on
-3. macOS: Grant Bluetooth permissions if prompted
+3. Keep Myo awake by wearing it or moving it
 
 ### Find Your Myo MAC Addresses
 
@@ -59,8 +62,8 @@ MYO_MAC_ADDRESSES = [
 **Multiple Myos:**
 ```python
 MYO_MAC_ADDRESSES = [
-    [255, 201, 227, 231, 151, 241],  # Myo 1 (left arm)
-    [147, 123, 98, 76, 54, 32],      # Myo 2 (right arm)
+    [255, 201, 227, 231, 151, 241],  # Myo 1 (e.g. left arm)
+    [147, 123, 98, 76, 54, 32],      # Myo 2 (e.g. right arm)
 ]
 ```
 
@@ -68,25 +71,24 @@ MYO_MAC_ADDRESSES = [
 
 ### Run
 
-Activate virtual environment and run:
 ```bash
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-python pyomyosc.py         # Inside venv, 'python' is always Python 3
+source .venv/bin/activate  # If using venv. On Windows: .venv\Scripts\activate
+python pyomyosc.py
 ```
 
-Each Myo vibrates once when successfully connected. Myos connect in parallel for faster startup (~2 seconds for 2 Myos).
+Each Myo vibrates once when successfully connected.
 
 **Note:** Remember to activate the virtual environment (`source .venv/bin/activate`) in every new terminal window. Your prompt will show `(.venv)` when activated.
 
 **When done:**
-- Press Ctrl+C to stop - Myo vibrates and disconnects (goes to sleep)
+- Press Ctrl+C to stop - Myo vibrates and disconnects
 - For deep sleep: `python shutdown.py` (requires USB charging to wake)
 
 ## OSC Messages
 
 ### Outgoing Data (Port 8000)
 
-Python sends Myo sensor data to your application:
+Python sends Myo sensor data to your application via OSC:
 
 | Address | Type | Description | Rate |
 |---------|------|-------------|------|
@@ -115,11 +117,11 @@ Send commands from your application to control Myo:
 
 ## Configuration
 
-Edit top of `pyomyosc.py`:
+Edit `pyomyosc.py`:
 
 ```python
 # OSC Configuration
-OSC_IP = "127.0.0.1"              # Target IP
+OSC_IP = "127.0.0.1"               # Target IP
 OSC_PORT = 8000                    # Outgoing data port
 OSC_COMMAND_PORT = 8001            # Incoming commands port
 ENABLE_OSC_COMMANDS = True         # Enable bidirectional control
@@ -134,8 +136,8 @@ SEND_BATTERY = True
 SEND_POSE = True
 SEND_ARM = True
 
-# Debug Output
-DEBUG_CONNECTION = False  # Connection and battery info
+# Debug Output on Terminal
+DEBUG_CONNECTION = False   # Connection and battery info
 DEBUG_COMMANDS = False     # OSC command logging
 ```
 
@@ -210,8 +212,7 @@ If you see `(.venv)` in your prompt, the environment is active.
 ### No data in Max/MSP
 1. Check Python shows "Connected to Myo"
 2. Verify Max: `[udpreceive 8000]`
-3. Check Max console (Cmd+B)
-4. Try: `OSC_IP = "127.0.0.1"` in script
+3. Check Max console (Cmd+M)
 
 ### Myo won't connect
 1. Connect Myo to USB power to turn it on
@@ -223,7 +224,7 @@ If you see `(.venv)` in your prompt, the environment is active.
 
 ### Connection drops
 1. Myo battery ~3 hours - check level
-2. Perform gesture to wake from sleep
+2. Perform "wave-out" gesture to wake from sleep
 3. Keep within 10m of dongle
 
 ### Multiple Myos not found
@@ -231,25 +232,6 @@ If you see `(.venv)` in your prompt, the environment is active.
 2. Run `python scan.py` first to find MAC addresses
 3. Verify MAC addresses typed correctly in pyomyosc.py
 4. Ensure you have one USB dongle per Myo
-5. Each Myo needs its own dedicated dongle
-
-### "Address already in use"
-```bash
-lsof -i :8000  # Check port usage
-```
-Change port in script or close other program
-
-## Platform Notes
-
-**macOS:** Grant Bluetooth permissions in System Preferences > Security & Privacy
-
-**Linux:** Add user to dialout group:
-```bash
-sudo usermod -a -G dialout $USER
-# Log out and log back in
-```
-
-**Windows:** Use `.venv\Scripts\activate` instead of `source .venv/bin/activate`
 
 ## Credits
 
