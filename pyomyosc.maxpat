@@ -9,16 +9,36 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 3.0, -871.0, 1372.0, 606.0 ],
+        "rect": [ 34.0, 133.0, 1372.0, 606.0 ],
         "boxes": [
+            {
+                "box": {
+                    "id": "obj-21",
+                    "maxclass": "comment",
+                    "numinlets": 1,
+                    "numoutlets": 0,
+                    "patching_rect": [ 1242.0, 166.125, 55.0, 20.0 ],
+                    "text": "start dsp"
+                }
+            },
+            {
+                "box": {
+                    "id": "obj-17",
+                    "maxclass": "comment",
+                    "numinlets": 1,
+                    "numoutlets": 0,
+                    "patching_rect": [ 993.0, 24.0, 143.0, 20.0 ],
+                    "text": "change icon/bar led color"
+                }
+            },
             {
                 "box": {
                     "id": "obj-23",
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 1214.0, 24.0, 38.0, 20.0 ],
-                    "text": "on/off"
+                    "patching_rect": [ 1217.0, 24.0, 126.0, 20.0 ],
+                    "text": "turn sonification on/off"
                 }
             },
             {
@@ -562,19 +582,8 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 432.0, 70.0, 22.0 ],
-                    "text": "loadmess 2"
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-98",
-                    "maxclass": "newobj",
-                    "numinlets": 1,
-                    "numoutlets": 1,
-                    "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 468.0, 72.0, 22.0 ],
-                    "text": "prepend set"
+                    "patching_rect": [ 1188.0, 468.0, 89.0, 22.0 ],
+                    "text": "loadmess set 2"
                 }
             },
             {
@@ -808,19 +817,8 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 494.0, 432.0, 70.0, 22.0 ],
-                    "text": "loadmess 1"
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-95",
-                    "maxclass": "newobj",
-                    "numinlets": 1,
-                    "numoutlets": 1,
-                    "outlettype": [ "" ],
-                    "patching_rect": [ 494.0, 468.0, 72.0, 22.0 ],
-                    "text": "prepend set"
+                    "patching_rect": [ 494.0, 468.0, 89.0, 22.0 ],
+                    "text": "loadmess set 1"
                 }
             },
             {
@@ -884,7 +882,7 @@
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 453.0, 24.0, 37.0, 20.0 ],
+                    "patching_rect": [ 451.14287731051445, 24.000001072883606, 37.0, 20.0 ],
                     "text": "index"
                 }
             },
@@ -970,7 +968,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 76.0, 266.0, 165.0, 22.0 ],
-                                    "text": "/myo/2/vibrate 1"
+                                    "text": "/myo/1/vibrate 1"
                                 }
                             },
                             {
@@ -1079,7 +1077,7 @@
                             }
                         ]
                     },
-                    "patching_rect": [ 494.0, 74.0, 77.0, 22.0 ],
+                    "patching_rect": [ 494.0000220835209, 86.54500861465931, 77.0, 22.0 ],
                     "text": "p commands"
                 }
             },
@@ -1102,7 +1100,7 @@
                     "numoutlets": 3,
                     "outlettype": [ "int", "", "" ],
                     "parameter_enable": 1,
-                    "patching_rect": [ 494.0, 22.0, 54.0, 23.0 ],
+                    "patching_rect": [ 494.00001472234726, 22.333333998918533, 36.98629868030548, 46.23287335038185 ],
                     "saved_attribute_attributes": {
                         "valueof": {
                             "parameter_enum": [ "1", "2" ],
@@ -1604,14 +1602,14 @@
             {
                 "patchline": {
                     "destination": [ "obj-61", 0 ],
-                    "midpoints": [ 503.5, 48.0, 503.5, 48.0 ],
+                    "midpoints": [ 503.50001472234726, 72.0, 503.5000220835209, 72.0 ],
                     "source": [ "obj-20", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-61", 1 ],
-                    "midpoints": [ 561.5, 48.0, 561.5, 48.0 ],
+                    "midpoints": [ 561.5, 48.0, 561.5000220835209, 48.0 ],
                     "source": [ "obj-22", 0 ]
                 }
             },
@@ -1632,14 +1630,14 @@
             {
                 "patchline": {
                     "destination": [ "obj-61", 1 ],
-                    "midpoints": [ 799.5, 60.0, 561.5, 60.0 ],
+                    "midpoints": [ 799.5, 72.0, 561.5000220835209, 72.0 ],
                     "source": [ "obj-37", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-61", 1 ],
-                    "midpoints": [ 873.5, 60.0, 561.5, 60.0 ],
+                    "midpoints": [ 873.5, 72.0, 561.5000220835209, 72.0 ],
                     "source": [ "obj-38", 0 ]
                 }
             },
@@ -1660,21 +1658,21 @@
             {
                 "patchline": {
                     "destination": [ "obj-34", 0 ],
-                    "midpoints": [ 503.5, 99.0, 503.5, 99.0 ],
+                    "midpoints": [ 503.5000220835209, 111.0, 503.5, 111.0 ],
                     "source": [ "obj-61", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-61", 1 ],
-                    "midpoints": [ 620.5, 60.0, 561.5, 60.0 ],
+                    "midpoints": [ 620.5, 72.0, 561.5000220835209, 72.0 ],
                     "source": [ "obj-62", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-61", 1 ],
-                    "midpoints": [ 679.5, 60.0, 561.5, 60.0 ],
+                    "midpoints": [ 679.5, 72.0, 561.5000220835209, 72.0 ],
                     "source": [ "obj-63", 0 ]
                 }
             },
@@ -1738,42 +1736,20 @@
                 "patchline": {
                     "destination": [ "obj-82", 0 ],
                     "midpoints": [ 503.5, 504.0, 27.5, 504.0 ],
-                    "source": [ "obj-95", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-95", 0 ],
-                    "midpoints": [ 503.5, 456.0, 503.5, 456.0 ],
                     "source": [ "obj-96", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-98", 0 ],
-                    "midpoints": [ 1197.5, 456.0, 1197.5, 456.0 ],
-                    "source": [ "obj-97", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-106", 0 ],
                     "midpoints": [ 1197.5, 504.0, 722.5, 504.0 ],
-                    "source": [ "obj-98", 0 ]
+                    "source": [ "obj-97", 0 ]
                 }
             }
         ],
         "parameters": {
             "obj-20": [ "tab", "tab", 0 ],
             "obj-36": [ "live.gain~", "volume", 0 ],
-            "parameterbanks": {
-                "0": {
-                    "index": 0,
-                    "name": "",
-                    "parameters": [ "-", "-", "-", "-", "-", "-", "-", "-" ],
-                    "buttons": [ "-", "-", "-", "-", "-", "-", "-", "-" ]
-                }
-            },
             "inherited_shortname": 1
         },
         "autosave": 0
