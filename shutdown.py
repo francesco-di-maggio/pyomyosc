@@ -113,7 +113,8 @@ print(f"Powering off {len(myos)} Myo(s)...")
 print("Note: Myos require USB charging cable to turn back on")
 print("=" * 60 + "\n")
 
-time.sleep(0.5)
+# Wait for vibrations to complete before power-off
+time.sleep(2)
 
 # Start poweroff threads for all connected Myos
 for myo_index, m in myos.items():
