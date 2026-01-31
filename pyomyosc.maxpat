@@ -4,12 +4,12 @@
         "appversion": {
             "major": 9,
             "minor": 1,
-            "revision": 1,
+            "revision": 2,
             "architecture": "x64",
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 34.0, 133.0, 1372.0, 606.0 ],
+        "rect": [ 34.0, 91.0, 1372.0, 613.0 ],
         "boxes": [
             {
                 "box": {
@@ -98,7 +98,7 @@
                         "appversion": {
                             "major": 9,
                             "minor": 1,
-                            "revision": 1,
+                            "revision": 2,
                             "architecture": "x64",
                             "modernui": 1
                         },
@@ -643,24 +643,13 @@
             },
             {
                 "box": {
-                    "id": "obj-107",
-                    "maxclass": "newobj",
-                    "numinlets": 1,
-                    "numoutlets": 0,
-                    "patching_rect": [ 713.0, 566.0, 41.0, 22.0 ],
-                    "text": "s myo"
-                }
-            },
-            {
-                "box": {
                     "dontreplace": 1,
                     "id": "obj-108",
                     "maxclass": "message",
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 313.0, 168.0, 22.0 ],
-                    "text": "right x_toward_elbow"
+                    "patching_rect": [ 1188.0, 313.0, 168.0, 22.0 ]
                 }
             },
             {
@@ -920,7 +909,7 @@
                         "appversion": {
                             "major": 9,
                             "minor": 1,
-                            "revision": 1,
+                            "revision": 2,
                             "architecture": "x64",
                             "modernui": 1
                         },
@@ -1179,8 +1168,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 494.0, 313.0, 168.0, 22.0 ],
-                    "text": "left x_toward_elbow"
+                    "patching_rect": [ 494.0, 313.0, 168.0, 22.0 ]
                 }
             },
             {
@@ -1440,8 +1428,8 @@
             },
             {
                 "patchline": {
-                    "destination": [ "obj-107", 0 ],
-                    "midpoints": [ 722.5, 540.0, 722.5, 540.0 ],
+                    "destination": [ "obj-44", 0 ],
+                    "midpoints": [ 722.5, 552.0, 27.5, 552.0 ],
                     "source": [ "obj-106", 0 ]
                 }
             },
@@ -1602,7 +1590,7 @@
             {
                 "patchline": {
                     "destination": [ "obj-61", 0 ],
-                    "midpoints": [ 503.50001472234726, 72.0, 503.5000220835209, 72.0 ],
+                    "midpoints": [ 503.50001472234726, 69.0, 503.5000220835209, 69.0 ],
                     "source": [ "obj-20", 0 ]
                 }
             },

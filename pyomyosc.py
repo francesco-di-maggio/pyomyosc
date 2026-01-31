@@ -140,10 +140,12 @@ def create_handlers(myo_index):
 
     def send_imu(quat, accel, gyro):
         if SEND_IMU:
-            osc_client.send_message(quat_addr, list(quat))
+            # Reorder quaternion from hardware [x,y,z,w] to Myo Connect standard [w,x,y,z]
+            # osc_client.send_message(quat_addr, list(quat))
+            osc_client.send_message(quat_addr, [quat[3], quat[0], quat[1], quat[2]])
             osc_client.send_message(accel_addr, list(accel))
             osc_client.send_message(gyro_addr, list(gyro))
-
+            
     def send_battery(battery_level):
         if SEND_BATTERY:
             osc_client.send_message(battery_addr, battery_level)
