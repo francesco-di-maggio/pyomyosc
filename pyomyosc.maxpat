@@ -672,8 +672,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 1188.0, 277.0, 97.0, 22.0 ],
-                    "text": "rest"
+                    "patching_rect": [ 1188.0, 277.0, 97.0, 22.0 ]
                 }
             },
             {
@@ -1191,8 +1190,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 494.0, 277.0, 97.0, 22.0 ],
-                    "text": "rest"
+                    "patching_rect": [ 494.0, 277.0, 97.0, 22.0 ]
                 }
             },
             {
@@ -1738,6 +1736,14 @@
         "parameters": {
             "obj-20": [ "tab", "tab", 0 ],
             "obj-36": [ "live.gain~", "volume", 0 ],
+            "parameterbanks": {
+                "0": {
+                    "index": 0,
+                    "name": "",
+                    "parameters": [ "-", "-", "-", "-", "-", "-", "-", "-" ],
+                    "buttons": [ "-", "-", "-", "-", "-", "-", "-", "-" ]
+                }
+            },
             "inherited_shortname": 1
         },
         "autosave": 0
